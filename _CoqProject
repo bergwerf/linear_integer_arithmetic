@@ -1,0 +1,8 @@
+-R . larith
+
+tactics.v
+notations.v
+lemmas.v
+
+formula.v
+automata.v
