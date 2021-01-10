@@ -2,7 +2,8 @@
 
 Require Import Bool PeanoNat Lia.
 
-(* Convert boolean arithmetic relations to Prop. *)
+Ltac inv H := inversion H; subst.
+
 Ltac bool_to_Prop :=
   match goal with
   | [H : _ && _ = true |- _] =>  apply andb_prop in H; destruct H
@@ -16,6 +17,7 @@ Ltac bool_to_Prop :=
   | [H : _ <? _ = false |- _]  => apply Nat.ltb_ge in H
   | |- (_ && _ = true)   => apply andb_true_intro; split
   | |- (_ || _ = false)  => apply orb_false_intro
+  | |- (_ || _ = true)   => apply orb_true_intro
   | |- (_ =? _ = true)   => apply Nat.eqb_eq
   | |- (_ =? _ = false)  => apply Nat.eqb_neq
   | |- (_ <=? _ = true)  => apply Nat.leb_le
