@@ -104,8 +104,8 @@ revert sa sb; induction word as [|c w]; simpl; intros.
     now exists x'. now exists y'.
 Qed.
 
-Corollary Prod_spec w :
-  Language A w /\ Language B w <-> Language Prod w. 
+Corollary Prod_spec word :
+  Language A word /\ Language B word <-> Language Prod word. 
 Proof.
 apply Prod_Accepts.
 Qed.
@@ -118,6 +118,15 @@ simpl; unfold prod_trans; simpl.
 destruct (list_length_le_1 _ (H1 c x)) as [Hx|[x' Hx]];
 destruct (list_length_le_1 _ (H2 c y)) as [Hy|[y' Hy]];
 rewrite Hx, Hy; simpl; lia.
+Qed.
+
+Theorem Prod_explicit :
+  Explicit A -> Explicit B -> Explicit Prod.
+Proof.
+intros H1 H2 c [x y].
+simpl; unfold prod_trans; simpl.
+assert(Hx := H1 c x); assert (Hy := H2 c y).
+rewrite prod_length; lia.
 Qed.
 
 End Product_construction.
@@ -151,8 +160,8 @@ revert s; induction word as [|c w]; simpl; intros.
     * easy.
 Qed.
 
-Corollary Pow_spec w :
-  Language Pow w <-> Language A w.
+Corollary Pow_spec word :
+  Language Pow word <-> Language A word.
 Proof.
 split; intros H.
 - apply Pow_Accepts in H; now inv H.
@@ -205,8 +214,8 @@ revert s; induction word as [|c w]; simpl; intros.
   now rewrite remove_None_app, remove_None_map_Some, IHs.
 Qed.
 
-Corollary Erej_spec w :
-  Language Erej w <-> Language A w.
+Corollary Erej_spec word :
+  Language Erej word <-> Language A word.
 Proof.
 intros; apply Erej_Accepts.
 Qed.
@@ -249,8 +258,8 @@ revert s; induction word as [|c w]; simpl; intros.
   destruct none. apply IHw. simpl in H1; lia.
 Qed.
 
-Corollary Compl_spec w :
-  Language Compl w <-> ¬Language A w.
+Corollary Compl_spec word :
+  Language Compl word <-> ¬Language A word.
 Proof.
 intros; apply Compl_Accepts.
 Qed.
@@ -262,3 +271,39 @@ easy.
 Qed.
 
 End Complementation.
+
+(* A language using a different alphabet can be decided using a projection. *)
+Section Projection.
+
+Variable A : automaton letter.
+Variable image : Set.
+Variable proj : image -> list letter.
+
+Definition Proj_trans i s := flat_map (λ c, trans A c s) (proj i).
+Definition Proj := Automaton image _ (start A) (accept A) Proj_trans.
+
+Theorem Proj_Accepts word s :
+  Accepts Proj word s <->
+  ∃pre, length pre = length word /\ Accepts A pre s /\
+  Forall2 (@In letter) pre (map proj word).
+Proof.
+revert s; induction word as [|c w]; simpl; intros.
+- split.
+  + exists []; simpl; repeat split; easy.
+  + intros [w [H1 H2]]. apply length_zero_iff_nil in H1; now subst.
+- split.
+  + intros. apply IHw in H as [v [H1 [H2 H3]]].
+    (* We need to find out under which state the accepting path proceeds. *)
+    admit.
+  + intros [v [H1 [H2 H3]]]. destruct v; simpl in *. easy.
+    inv H3. apply IHw; exists v; repeat split. lia.
+    * eapply Accepts_ext. apply H2. intros x Hx.
+      apply in_flat_map in Hx as [x' Hx].
+      apply in_flat_map; exists x'; split. easy.
+      apply in_flat_map; exists l; easy.
+    * easy.
+Admitted.
+
+End Projection.
+
+End Results.
