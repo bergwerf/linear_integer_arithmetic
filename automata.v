@@ -21,14 +21,16 @@ Section Definitions.
 Variable letter : Set.
 Variable A : automaton letter.
 
-Definition Deterministic := ∀c s, length (trans A c s) <= 1.
-Definition Explicit := ∀c s, length (trans A c s) > 0.
-
 Fixpoint Accepts (word : list letter) (s : list (state A)) :=
   match word with
   | [] => existsb (accept A) s = true
   | c :: w => Accepts w (flat_map (trans A c) s)
   end.
+
+Definition Language word := Accepts word [start A].
+Definition Deterministic := ∀c s, length (trans A c s) <= 1.
+Definition Explicit := ∀c s, length (trans A c s) > 0.
+Definition Finite := Σ Q, ∀s : state A, In s Q.
 
 Theorem Accepts_dec w s :
   {Accepts w s} + {¬Accepts w s}.
@@ -49,12 +51,37 @@ revert s1 s2; induction w; simpl; intros.
   apply H0, Hs'. apply Hs'.
 Qed.
 
-Definition Language word := Accepts word [start A].
+Theorem not_Accepts_nil w :
+  ¬Accepts w [].
+Proof.
+now induction w.
+Qed.
+
+Theorem Accepts_app w s s' :
+  Accepts w (s ++ s') <-> Accepts w s \/ Accepts w s'.
+Proof.
+revert s s'; induction w as [|c w]; simpl; intros.
+- split; rewrite existsb_app; intros; b_Prop; auto.
+- split; intros.
+  + apply IHw; rewrite <-flat_map_app; apply H.
+  + rewrite flat_map_app; apply IHw, H.
+Qed.
+
+Theorem Accepts_reveal w s :
+  Accepts w s -> Exists (Accepts w) (map (λ t, [t]) s).
+Proof.
+induction s; simpl; intros.
+- exfalso; eapply not_Accepts_nil, H.
+- replace (a :: s) with ([a] ++ s) in H by easy.
+  apply Exists_cons; apply Accepts_app in H as [H|H].
+  now left. right; apply IHs, H.
+Qed.
 
 End Definitions.
 
 Arguments Deterministic {_}.
 Arguments Explicit {_}.
+Arguments Finite {_}.
 Arguments Accepts {_}.
 Arguments Language {_}.
 
@@ -282,28 +309,61 @@ Variable proj : image -> list letter.
 Definition Proj_trans i s := flat_map (λ c, trans A c s) (proj i).
 Definition Proj := Automaton image _ (start A) (accept A) Proj_trans.
 
+(* The pre-image of a word in the image. *)
+Definition Pre_image word pre :=
+  length pre = length word /\ Forall2 (@In letter) pre (map proj word).
+
 Theorem Proj_Accepts word s :
-  Accepts Proj word s <->
-  ∃pre, length pre = length word /\ Accepts A pre s /\
-  Forall2 (@In letter) pre (map proj word).
+  Accepts Proj word s <-> ∃pre, Pre_image word pre /\ Accepts A pre s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - split.
-  + exists []; simpl; repeat split; easy.
-  + intros [w [H1 H2]]. apply length_zero_iff_nil in H1; now subst.
+  + exists []; repeat split; simpl; easy.
+  + intros [w [[H1 H2] H3]]. apply length_zero_iff_nil in H1; now subst.
 - split.
-  + intros. apply IHw in H as [v [H1 [H2 H3]]].
-    (* We need to find out under which state the accepting path proceeds. *)
-    admit.
-  + intros [v [H1 [H2 H3]]]. destruct v; simpl in *. easy.
-    inv H3. apply IHw; exists v; repeat split. lia.
-    * eapply Accepts_ext. apply H2. intros x Hx.
-      apply in_flat_map in Hx as [x' Hx].
-      apply in_flat_map; exists x'; split. easy.
-      apply in_flat_map; exists l; easy.
-    * easy.
-Admitted.
+  + intros. apply IHw in H as [v [[H1 H2] H3]].
+    apply Accepts_reveal, Exists_exists in H3 as [xs [H4 H5]].
+    apply in_map_iff in H4 as [x [R Hx]]; subst.
+    apply in_flat_map in Hx as [x' [Hx' Hx]].
+    apply in_flat_map in Hx as [c' Hc'].
+    exists (c' :: v); repeat split; simpl.
+    * now rewrite H1.
+    * apply Forall2_cons; easy.
+    * eapply Accepts_ext. apply H5. intros y Hy. inv Hy; try easy.
+      apply in_flat_map; exists x'; easy.
+  + intros [v [[H1 H2] H3]]. destruct v; simpl in *. easy.
+    inv H2. apply IHw; exists v; repeat split. lia. easy.
+    eapply Accepts_ext. apply H3. intros x Hx.
+    apply in_flat_map in Hx as [x' Hx].
+    apply in_flat_map; exists x'; split. easy.
+    apply in_flat_map; exists l; easy.
+Qed.
+
+Corollary Proj_spec word :
+  Language Proj word <-> ∃pre, Pre_image word pre /\ Language A pre.
+Proof.
+intros; apply Proj_Accepts.
+Qed.
 
 End Projection.
+
+(* We can find a word in any regular language or decide it is empty. *)
+(* The automaton must have a finite number of states. *)
+(* A more complete proof would construct regular expressions. *)
+Section Decidability.
+
+Variable A : automaton letter.
+Hypothesis finite : Finite A.
+
+Theorem Language_empty_dec :
+  {∃w, Language A w} + {∀w, ¬Language A w}.
+Proof.
+(* Well-founded induction on the number of states. *)
+(* - Turn predecessors of accept states into accept states. *)
+(* - Remove all old accept states. *)
+(* - We either reach the start state, or run out of accept states. *)
+Admitted.
+
+End Decidability.
 
 End Results.
