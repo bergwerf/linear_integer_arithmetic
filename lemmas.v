@@ -49,11 +49,17 @@ Proof.
 now induction l.
 Qed.
 
-Lemma list_length_le_1 {X} (l : list X) :
-  length l <= 1 -> l = [] \/ ∃x, l = [x].
+Lemma list_singleton {X} (l : list X) :
+  length l = 1 -> ∃x, l = [x].
 Proof.
-intros. destruct l. now left. destruct l.
-right; now exists x. simpl in H; lia.
+intros. destruct l. easy. destruct l.
+now exists x. easy.
+Qed.
+
+Lemma in_singleton {X} (x x' : X) :
+  In x [x'] -> x = x'.
+Proof.
+intros H; now inv H.
 Qed.
 
 Section Option_list_filtering.
