@@ -27,9 +27,48 @@ Fixpoint Accepts (word : list letter) (s : list (state A)) :=
   | c :: w => Accepts w (flat_map (trans A c) s)
   end.
 
+(* The language of an automaton contains all accepted words. *)
 Definition Language word := Accepts word [start A].
+
+(* An automaton is deterministic if every transition goes to 1 state. *)
 Definition Deterministic := ∀c s, length (trans A c s) = 1.
-Definition Finite := Σ Q, ∀s : state A, In s Q.
+
+(* Two state lists are considered similar if they accept the same strings. *)
+Definition Similar s t := ∀w, Accepts w s <-> Accepts w t.
+
+(* A finite automaton has a list of all states up to similarity. *)
+Definition Finite n := Σ Q, length Q = n /\
+  ∀s : state A, ∃t, In t Q /\ Similar [s] [t].
+
+(*
+A note on efficiency.
+---------------------
+I do not expect my implementation of the automata-based decision procedure to be
+efficient, but I try to stick to efficient definitions unless they introduce too
+much complexity. The previous definition of Finite is fairly simple. The Similar
+predicate is added to allow an infinite state domain, and to allow giving an
+efficient enumeration of states (such that the powerset construction has a size
+of 2^n).
+
+However, because of the determinization needed ater projection, the size of
+automata will be huge even for fairly small formulae. A more efficient
+enumeration of states could use binary numbers, for example:
+
+```
+Definition Effectively_Finite := Σ Q (n : N),
+  ∀s : state A, ∃i, N.lt i n /\ Similar s (Q i).
+```
+
+But the benefits of this are unclear. And I am not sure if the decision
+algorithm can ever run reasonably efficiently in Coq anyway. I might implement
+the algorithm in a procedural language after I finished verifying it.
+*)
+
+Theorem not_Accepts_nil w :
+  ¬Accepts w [].
+Proof.
+now induction w.
+Qed.
 
 Theorem Accepts_dec w s :
   {Accepts w s} + {¬Accepts w s}.
@@ -50,12 +89,6 @@ revert s1 s2; induction w; simpl; intros.
   apply H0, Hs'. apply Hs'.
 Qed.
 
-Theorem not_Accepts_nil w :
-  ¬Accepts w [].
-Proof.
-now induction w.
-Qed.
-
 Theorem Accepts_app w s s' :
   Accepts w (s ++ s') <-> Accepts w s \/ Accepts w s'.
 Proof.
@@ -66,7 +99,7 @@ revert s s'; induction w as [|c w]; simpl; intros.
   + rewrite flat_map_app; apply IHw, H.
 Qed.
 
-Theorem Accepts_reveal w s :
+Theorem Accepts_determine w s :
   Accepts w s -> Exists (Accepts w) (map (λ t, [t]) s).
 Proof.
 induction s; simpl; intros.
@@ -98,11 +131,11 @@ Definition prod_accept s := accept A (fst s) && accept B (snd s).
 Definition prod_trans c s := list_prod (trans A c (fst s)) (trans B c (snd s)).
 Definition Prod := Automaton _ _ prod_start prod_accept prod_trans.
 
-Theorem Prod_Accepts word sa sb :
-  Accepts A word sa /\ Accepts B word sb <->
-  Accepts Prod word (list_prod sa sb).
+Theorem Prod_Accepts word s t :
+  Accepts A word s /\ Accepts B word t <->
+  Accepts Prod word (list_prod s t).
 Proof.
-revert sa sb; induction word as [|c w]; simpl; intros.
+revert s t; induction word as [|c w]; simpl; intros.
 - split.
   + intros [Ha Hb];
     apply existsb_exists in Ha as [x Hx];
@@ -143,11 +176,16 @@ simpl; unfold prod_trans; simpl.
 now rewrite prod_length, H1, H2.
 Qed.
 
-Theorem Prod_fin :
-  Finite A -> Finite B -> Finite Prod.
+Theorem Prod_fin m n :
+  Finite A m -> Finite B n -> Finite Prod (m * n).
 Proof.
-intros [a Ha] [b Hb]; exists (list_prod a b).
-intros [x y]; apply in_prod. apply Ha. apply Hb.
+intros [a [a_len Ha]] [b [b_len Hb]]; exists (list_prod a b); split.
+simpl; now rewrite prod_length, a_len, b_len.
+intros [x y]; destruct (Ha x) as [x' Hx], (Hb y) as [y' Hy].
+exists (x', y'); split. now apply in_prod.
+intros w; simpl; rewrite ?list_prod_single.
+split; intros; apply Prod_Accepts; apply Prod_Accepts in H.
+all: split; [apply Hx|apply Hy]; easy.
 Qed.
 
 End Product_construction.
@@ -156,77 +194,74 @@ End Product_construction.
 Section Powerset_construction.
 
 Variable A : automaton letter.
-Hypothesis fin : Finite A.
-Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
-Definition Pow :
-  automaton letter.
-Proof.
-apply Automaton with (state:=Σ l : list (state A), NoDup l).
-- (* Initial state *)
-  exists [start A].
-  apply NoDup_cons. easy. apply NoDup_nil.
-- (* Accepting states *)
-  intros [s _]. apply (existsb (accept A) s).
-- (* Transition *)
-  intros c [s _].
-  apply cons. 2: apply nil.
-  exists (nodup dec (flat_map (trans A c) s)).
-  apply NoDup_nodup.
-Defined.
+Definition pow_start := [start A].
+Definition pow_accept s := existsb (accept A) s.
+Definition pow_trans c s := [flat_map (trans A c) s].
+Definition Pow := Automaton _ _ pow_start pow_accept pow_trans.
 
 Theorem Pow_Accepts word s :
-  Accepts Pow word s <-> Exists (Accepts A word) (map (@projT1 _ _) s).
+  Accepts Pow word s <-> Exists (Accepts A word) s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - split.
-  + intros H; apply existsb_exists in H as [[x Hx] [H1 H2]].
-    apply Exists_exists; exists x; split. 2: easy.
-    apply in_map_iff; eexists; split. 2: apply H1. easy.
-  + intros H; apply Exists_exists in H as [x [H1 H2]].
-    apply in_map_iff in H1 as [xT [H1a H1b]].
-    apply existsb_exists; exists xT; split. easy.
-    destruct xT; simpl in *; subst; easy.
+  + intros H; apply existsb_exists in H as [x H].
+    apply Exists_exists; now exists x.
+  + intros H; apply Exists_exists in H as [x H].
+    apply existsb_exists; now exists x.
 - split.
-  + intros H; apply IHw, Exists_exists in H as [x [H1 Hx]].
-    apply in_map_iff in H1 as [xT [H1 H2]].
-    apply in_flat_map in H2 as [[x' Hx'] [H2 H3]].
-    apply in_singleton in H3; subst. simpl in Hx.
-    apply Exists_exists; exists x'; split.
-    * apply in_map_iff; eexists; split. 2: apply H2. easy.
-    * eapply Accepts_ext. apply Hx. intros. eapply nodup_In, H.
-  + intros H; apply Exists_exists in H as [x [H1 H2]].
-    apply in_map_iff in H1 as [xT Hx].
-    remember (flat_map (trans A c)) as fm.
-    apply IHw, Exists_exists; exists (nodup dec (fm x)); split.
-    * apply in_map_iff;
-      exists (existT _ (nodup dec (fm x)) (NoDup_nodup dec (fm x))).
-      split; simpl. easy.
-      apply in_flat_map; exists xT; split. easy.
-      destruct xT, Hx; simpl in *; subst; now left.
-    * eapply Accepts_ext. apply H2. intros; now apply nodup_In.
+  + intros H; apply IHw, Exists_exists in H as [x [H1 H2]].
+    apply in_flat_map in H1 as [x' [H1 H3]].
+    inv H3. apply Exists_exists; now exists x'.
+  + intros H; apply Exists_exists in H as [x H].
+    apply IHw, Exists_exists; exists (flat_map (trans A c) x); split.
+    * apply in_flat_map; exists x; split. easy. apply in_eq.
+    * easy.
 Qed.
 
 Corollary Pow_spec word :
   Language Pow word <-> Language A word.
 Proof.
 split; intros H.
-- apply Pow_Accepts in H; now inv H.
+- apply Pow_Accepts in H; inv H.
 - apply Pow_Accepts. apply Exists_cons; now left.
 Qed.
 
 Theorem Pow_det :
   Deterministic Pow.
 Proof.
-intros c [s Hs]; easy.
+easy.
 Qed.
 
-Theorem Pow_fin :
-  Finite A -> Finite Pow.
+Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
+
+Theorem Pow_fin n :
+  Finite A n -> Finite Pow (2^n).
 Proof.
-intros [a Ha].
-(* We need to list all NoDup combinations of states. *)
-Admitted.
+intros [a [a_len Ha]].
+apply list_powerset with (l:=a) in dec. 
+destruct dec as [L [L_len HL]]; clear dec; exists L.
+split. simpl; now rewrite L_len, a_len. clear L_len.
+(* t associates s with similar states in A. *)
+intros s; apply witness_list with (xs:=s) in Ha as [t Ht].
+(* r associates t with an equivalent set in L. *)
+destruct (proj1 (HL t)) as [r Hr].
+- intros. apply Forall2_in_r with (y:=x) in Ht as [y [H1 H2]]; easy.
+- clear HL. exists r; split. easy.
+  intros w; split; intros.
+  (* If Pow accepts w on state s, then A accepts w on some state in s. *)
+  all: apply Pow_Accepts, Exists_exists in H as [xs [H1 H2]]; inv H1.
+  all: apply Accepts_determine, Exists_exists in H2 as [x' [H2 H3]].
+  all: apply in_map_iff in H2 as [x [R H2]]; subst.
+  all: apply Pow_Accepts, Exists_exists. 1: exists r. 2: exists s.
+  all: split; [apply in_eq|].
+  + eapply Forall2_in_l in Ht as [y Hy]. 2: apply H2.
+    apply Hy in H3. eapply Accepts_ext. apply H3.
+    intros; inv H. apply Hr, Hy.
+  + eapply Forall2_in_r in Ht as [y Hy]. 2: apply Hr, H2.
+    apply Hy in H3. eapply Accepts_ext. apply H3.
+    intros; inv H.
+Qed.
 
 End Powerset_construction.
 
@@ -282,12 +317,17 @@ destruct (length (trans A c s) =? 0) eqn:E; simpl; b_Prop.
 easy. assert(Hcs := H c s). rewrite map_length; lia.
 Qed.
 
-Theorem Opt_fin :
-  Finite A -> Finite Opt.
+Theorem Opt_fin n :
+  Finite A n -> Finite Opt (S n).
 Proof.
-intros [a Ha]; exists (None :: map Some a); intros [s|].
-- apply in_cons. apply in_map_iff; exists s; split. easy. apply Ha.
-- apply in_eq.
+intros [a [a_len Ha]]; exists (None :: map Some a); simpl; split.
+now rewrite map_length, a_len. intros [s|].
+- destruct (Ha s) as [t Ht]; exists (Some t); split.
+  + apply in_cons. apply in_map_iff; exists t; easy.
+  + intros w; split; intros.
+    all: apply Opt_Accepts; apply Opt_Accepts in H; simpl in *.
+    all: now apply Ht.
+- exists None; split. apply in_eq. easy.
 Qed.
 
 End Explicit_rejection.
@@ -323,10 +363,13 @@ Proof.
 easy.
 Qed.
 
-Theorem Compl_fin :
-  Finite A -> Finite Compl.
+Theorem Compl_fin n :
+  Finite A n -> Finite Compl n.
 Proof.
-easy.
+intros [a [a_len Ha]]; exists a; split. easy. intros.
+destruct (Ha s) as [t Ht]; exists t. split. easy.
+intros w; split; intros; apply Compl_Accepts; apply Compl_Accepts in H.
+all: intros H'; apply H, Ht, H'.
 Qed.
 
 End Complementation.
@@ -354,7 +397,7 @@ revert s; induction word as [|c w]; simpl; intros.
   + intros [w [[H1 H2] H3]]. apply length_zero_iff_nil in H1; now subst.
 - split.
   + intros. apply IHw in H as [v [[H1 H2] H3]].
-    apply Accepts_reveal, Exists_exists in H3 as [xs [H4 H5]].
+    apply Accepts_determine, Exists_exists in H3 as [xs [H4 H5]].
     apply in_map_iff in H4 as [x [R Hx]]; subst.
     apply in_flat_map in Hx as [x' [Hx' Hx]].
     apply in_flat_map in Hx as [c' Hc'].
@@ -377,10 +420,14 @@ Proof.
 intros; apply Proj_Accepts.
 Qed.
 
-Theorem Proj_fin :
-  Finite A -> Finite Proj.
+Theorem Proj_fin n :
+  Finite A n -> Finite Proj n.
 Proof.
-easy.
+intros [a [a_len Ha]]; exists a; split. easy. intros.
+destruct (Ha s) as [t Ht]; exists t; split. easy.
+intros w; split; intros; apply Proj_Accepts;
+apply Proj_Accepts in H as [pre H]; exists pre.
+all: split; [easy|apply Ht, H].
 Qed.
 
 End Projection.
@@ -391,15 +438,20 @@ End Projection.
 Section Decidability.
 
 Variable A : automaton letter.
-Hypothesis fin : Finite A.
+Variable n : nat.
+Hypothesis fin : Finite A n.
 
 Theorem Language_empty_dec :
   {∃w, Language A w} + {∀w, ¬Language A w}.
 Proof.
-(* Well-founded induction on the number of states. *)
-(* - Turn predecessors of accept states into accept states. *)
-(* - Remove all old accept states. *)
-(* - We either reach the start state, or run out of accept states. *)
+(*
+Method 1:
+---------
+Well-founded induction on the number of states.
+- Remove accept states, and make their predecessors accept states.
+- We either reach the start state, or run out of accept states.
+- This is essentially a BFS for a connecting path.
+*)
 Admitted.
 
 End Decidability.

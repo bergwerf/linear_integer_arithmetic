@@ -2,7 +2,7 @@
 
 Require Import Bool PeanoNat Lia.
 
-Ltac inv H := inversion H; subst; clear H.
+Ltac inv H := inversion H; subst; clear H; try easy.
 
 Ltac bool_to_Prop :=
   match goal with
