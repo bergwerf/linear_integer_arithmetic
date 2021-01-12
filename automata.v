@@ -242,33 +242,30 @@ Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 Theorem Pow_size n :
   Finite A n -> Finite Pow (2^n).
 Proof.
-intros [Q [Q_len can]].
+intros [Q [Q_len Q_can]].
 apply list_powerset with (l:=Q) in dec. 
-destruct dec as [PQ [PQ_len [PQ1 _]]]; clear dec; exists PQ.
+destruct dec as [PQ [PQ_len [PQ_can _]]]; clear dec; exists PQ.
 split. simpl; now rewrite PQ_len, Q_len. clear Q_len PQ_len.
 (* ss_can associates ss with A-canonical states. *)
-intros ss; pose(ss_can_a := map (λ s, projT1 (can s)) ss).
+intros ss; pose(ss_can_a := map (λ s, projT1 (Q_can s)) ss).
 (* ss_can associates ss_can_a with the canonical set in L. *)
-destruct (PQ1 ss_can_a) as [ss_can Hss].
+destruct (PQ_can ss_can_a) as [ss_can Hss].
 - intros s Hs. apply in_map_iff in Hs as [t [Hs Ht]].
-  destruct (can t); simpl in *; subst; easy.
-- clear PQ1. exists ss_can; split. easy.
+  destruct (Q_can t); simpl in *; subst; easy.
+- clear PQ_can. exists ss_can; split. easy.
   intros w; split; intros.
-  (* We must prove that A accepts w from ss_can/ss. *)
-  all: apply Pow_Accepts, Exists_exists.
-  1: exists ss_can. 2: exists ss.
-  all: split; [apply in_eq|].
+  all: apply Pow_Accepts, Exists_exists; eexists; split; [apply in_eq|].
   (* If Pow accepts w, then A accepts w from a single state s. *)
   all: apply Pow_Accepts, Exists_exists in H as [ss' [R H]]; inv R.
   all: apply Accepts_determine, Exists_exists in H as [s' [Hs' H]].
   all: apply in_map_iff in Hs' as [s [R Hs]]; subst.
   + (* Determine A-canonical state for s, and apply similarity to H. *)
-    destruct (can s) as [s_can Hcan] eqn:s_can_def. apply Hcan in H.
+    destruct (Q_can s) as [s_can Hcan] eqn:s_can_def. apply Hcan in H.
     eapply Accepts_subset. apply H. intros t Ht; inv Ht.
     apply Hss, in_map_iff; exists s. now rewrite s_can_def.
   + (* s is an A-canonical state, find an original in ss. *)
     apply Hss in Hs; apply in_map_iff in Hs as [t [R Ht]].
-    destruct (can t) as [t_can Hcan]; simpl in R; subst.
+    destruct (Q_can t) as [t_can Hcan]; simpl in R; subst.
     apply Hcan in H. eapply Accepts_subset. apply H. intros r Hr; inv Hr.
 Qed.
 
