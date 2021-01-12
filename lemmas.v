@@ -69,6 +69,15 @@ Theorem list_powerset {X} (l : list X) :
     ((∀s, (∀x, In x s -> In x l) -> Σ t, In t Pl /\ ∀x, In x s <-> In x t) ×
     (∀s x, In s Pl -> In x s -> In x l)).
 Proof.
+(*
+To find a canonical element, this program essentially breaks down a given
+list in the order given by l. For each element it remembers if it was in the
+list and then removes it from the list for a recursive call. The list is then
+rebuilt in the same order as l. A more efficient approach could:
+- Use an ordering to sort the list (but the improvement here is unclear).
+- Represent sets as trees, or as l zipped with some list of booleans.
+  Here every element might be a canonical element.
+*)
 intros dec; induction l.
 - exists [[]]; repeat split; simpl.
   + intros s H; exists []; split. now left.
