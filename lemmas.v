@@ -37,6 +37,13 @@ Qed.
 Variable P_dec : {P} + {¬P}.
 Variable Q_dec : {Q} + {¬Q}.
 
+Lemma and_dec :
+  {P /\ Q} + {¬(P /\ Q)}.
+Proof.
+destruct P_dec, Q_dec.
+now left. all: now right.
+Qed.
+
 End Propositions.
 
 End Laws_of_logic.
@@ -62,9 +69,21 @@ intros. destruct l. easy. destruct l.
 now exists x. easy.
 Qed.
 
+Lemma Exists_weaken {X} P (l l' : list X) :
+  (∀x, In x l -> In x l') ->
+  Exists P l -> Exists P l'.
+Proof.
+intros; apply Exists_exists in H0 as [x Hx].
+apply Exists_exists; exists x; split. apply H, Hx. easy.
+Qed.
+
+Section List_constructions_using_decidability.
+
+Variable X : Type.
+Hypothesis dec : ∀x y : X, {x = y} + {x ≠ y}.
+
 (* Construct a powerset that can effectively give canonical members. *)
-Theorem list_powerset {X} (l : list X) :
-  (∀x y : X, {x = y} + {x ≠ y}) ->
+Theorem list_powerset (l : list X) :
   Σ Pl, (length Pl = 2^length l) ×
     ((∀s, (∀x, In x s -> In x l) -> Σ t, In t Pl /\ ∀x, In x s <-> In x t) ×
     (∀s x, In s Pl -> In x s -> In x l)).
@@ -78,7 +97,7 @@ rebuilt in the same order as l. A more efficient approach could:
 - Represent sets as trees, or as l zipped with some list of booleans.
   Here every element might be a canonical element.
 *)
-intros dec; induction l.
+induction l.
 - exists [[]]; repeat split; simpl.
   + intros s H; exists []; split. now left.
     split; intros. exfalso; eapply H, H0. easy.
@@ -103,6 +122,20 @@ intros dec; induction l.
     * apply in_map_iff in H as [t [R H]]; subst.
       inv H0. apply in_eq. eapply in_cons, IH2. apply H. easy.
 Qed.
+
+Theorem list_intersection (a b : list X) :
+  Σ is, ∀x, In x is <-> In x a /\ In x b.
+Proof.
+Admitted.
+
+Theorem list_remove_subset (l s : list X) :
+  (∀x, In x s -> In x l) ->
+  Σ r, length r = length l - length s /\
+    (∀x, In x r <-> In x l /\ ¬In x s).
+Proof.
+Admitted.
+
+End List_constructions_using_decidability.
 
 Section Option_list_filtering.
 

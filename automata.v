@@ -442,25 +442,107 @@ End Projection.
 (* The automaton must have a finite number of states. *)
 Section Decidability.
 
-(*
-Strategy: Well-founded induction on the number of states.
-- Check if the list of initial states contains an accept state.
-- If so, then the empty word is a solution.
-- If not, remove all initial states from the automaton, and
-  move forward to all states that are connected from the initial states.
-*)
+(* Show that connectivity in a graph is decidable. *)
+Section Connectivity.
 
-Variable alphabet : list letter.
-Hypothesis complete_alphabet : ∀c, In c alphabet.
+Variable node : Type.
+Variable adj : node -> list node.
+Hypothesis dec : ∀v w : node, {v = w} + {v ≠ w}.
+
+(* A node is connected to a target node via a path in graph g. *)
+Inductive Connected g ts : node -> Prop :=
+  | Path_finish v : In v ts -> Connected g ts v
+  | Path_step v w : In w g -> In w (adj v) ->
+                    Connected g ts w -> Connected g ts v.
+
+Lemma Connected_weaken g h ts v :
+  (∀x, In x h -> In x g) ->
+  Connected h ts v -> Connected g ts v.
+Proof.
+intros subset C; induction C.
+now apply Path_finish. eapply Path_step.
+apply subset, H. all: easy.
+Qed.
+
+Theorem Connected_dec g ts v :
+  {Connected g ts v} + {¬Connected g ts v}.
+Proof.
+remember (length g) as n; revert Heqn; revert g v.
+apply lt_wf_rect with (n:=n); clear n; intros n IH g v g_len.
+(* Check if v is a target state. *)
+destruct (in_dec dec v ts).
+left; now apply Path_finish.
+(* Determine if there is an intersection between g and adj v. *)
+destruct (list_intersection _ dec g (adj v)) as [gv gv_spec].
+destruct (Nat.eq_dec (length gv) 0).
+- (* There is no connecting node. *)
+  right; intros HC; inv HC. apply in_nil with (a:=w).
+  apply length_zero_iff_nil in e; rewrite <-e.
+  now apply gv_spec.
+- (* Apparently g is not empty. *)
+  assert(length g ≠ 0). {
+    destruct g, gv; simpl in *; try easy.
+    exfalso; eapply gv_spec; now left. }
+  (* Remove gv from the search space. *)
+  destruct (list_remove_subset _ dec g gv) as [h [h_len h_spec]].
+  intros; apply gv_spec; easy.
+  (* Determine if a connecting node is connected through h. *)
+  destruct (Exists_dec (Connected h ts) gv).
+  intros; eapply IH. 2: rewrite h_len; reflexivity.
+  rewrite <-g_len; lia.
+  + (* A connecting node does exist. *)
+    left. apply Exists_exists in e as [w Hw].
+    apply Path_step with (w:=w). 1-2: apply gv_spec, Hw.
+    apply Connected_weaken with (h:=h).
+    intros; now apply h_spec. easy.
+  + (* No connection exists. *)
+    right.
+    (* This is true, but tricky to prove. *)
+    (* I want to look for a more elegant proof construction. *)
+Admitted.
+
+End Connectivity.
+
+Arguments Connected {_}.
+
+Variable letters : list letter.
+Hypothesis all_letters : ∀c, In c letters.
 
 Variable A : automaton letter.
-Variable n : nat.
-Hypothesis fin : Finite A n.
+Hypothesis state_dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
-Theorem ex_Accepts_dec s :
-  {∃w, Accepts A w s} + {∀w, ¬Accepts A w s}.
+(* Reduce finding an accepting word to connectivity to an accept state. *)
+Section Connected_accept.
+ 
+Variable Q : list (state A).
+Variable can : state A -> state A.
+Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
+
+Definition Automaton_adj s := map can (flat_map (λ c, trans A c s) letters).
+Definition Connected_accept := Connected Automaton_adj (filter (accept A) Q) Q.
+
+Theorem Connected_accept_iff_ex_Accepts s :
+  Connected_accept s <-> ∃w, Accepts A w [s].
 Proof.
-destruct fin as [Q [Q_len can]].
+Admitted.
+
+Corollary Connected_accepts_dec s :
+  {Connected_accept s} + {¬Connected_accept s}.
+Proof.
+apply Connected_dec, state_dec.
+Qed.
+
+End Connected_accept.
+
+Variable size : nat.
+Hypothesis A_size : Finite A size.
+
+Corollary ex_Accepts_dec s :
+  {∃w, Accepts A w [s]} + {∀w, ¬Accepts A w [s]}.
+Proof.
+destruct A_size as [Q [Q_len can]].
+pose(can_f s := projT1 (can s)).
+destruct (Connected_accepts_dec Q can_f s).
 Admitted.
 
 Corollary Language_inhabited_dec :
