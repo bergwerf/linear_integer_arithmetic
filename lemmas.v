@@ -37,6 +37,12 @@ Qed.
 Variable P_dec : {P} + {¬P}.
 Variable Q_dec : {Q} + {¬Q}.
 
+Lemma not_dec :
+  {¬P} + {¬¬P}.
+Proof.
+destruct P_dec; auto.
+Qed.
+
 Lemma and_dec :
   {P /\ Q} + {¬(P /\ Q)}.
 Proof.
@@ -69,18 +75,12 @@ intros. destruct l. easy. destruct l.
 now exists x. easy.
 Qed.
 
-Lemma Exists_weaken {X} P (l l' : list X) :
-  (∀x, In x l -> In x l') ->
-  Exists P l -> Exists P l'.
-Proof.
-intros; apply Exists_exists in H0 as [x Hx].
-apply Exists_exists; exists x; split. apply H, Hx. easy.
-Qed.
-
 Section List_constructions_using_decidability.
 
 Variable X : Type.
 Hypothesis dec : ∀x y : X, {x = y} + {x ≠ y}.
+
+Section Powerset_with_canonical_elements.
 
 (* Construct a powerset that can effectively give canonical members. *)
 Theorem list_powerset (l : list X) :
@@ -123,17 +123,77 @@ induction l.
       inv H0. apply in_eq. eapply in_cons, IH2. apply H. easy.
 Qed.
 
-Theorem list_intersection (a b : list X) :
-  Σ is, ∀x, In x is <-> In x a /\ In x b.
-Proof.
-Admitted.
+End Powerset_with_canonical_elements.
 
-Theorem list_remove_subset (l s : list X) :
-  (∀x, In x s -> In x l) ->
-  Σ r, length r = length l - length s /\
-    (∀x, In x r <-> In x l /\ ¬In x s).
+Section Filter_by_a_predicate.
+
+Variable P : X -> Prop.
+Hypothesis P_dec : ∀x, {P x} + {¬P x}.
+
+Fixpoint pfilter (l : list X) :=
+  match l with
+  | [] => []
+  | x :: l' => if P_dec x then x :: pfilter l' else pfilter l'
+  end.
+
+Theorem pfilter_spec l x :
+  In x (pfilter l) <-> In x l /\ P x.
 Proof.
-Admitted.
+induction l; simpl. easy.
+destruct (P_dec a); simpl; split; intros.
+all: try split; repeat destruct H; subst.
+all: try apply IHl in H; try easy; auto.
+now right. right; apply IHl; easy. now right. now apply IHl.
+Qed.
+
+Theorem pfilter_length l :
+  length (pfilter l) <= length l.
+Proof.
+induction l; simpl. easy.
+destruct (P_dec a); simpl; lia.
+Qed.
+
+End Filter_by_a_predicate.
+
+Section List_intersection_and_subtraction.
+
+Variable l l' : list X.
+
+Definition list_isect :=
+  pfilter (λ x, In x l') (λ x, in_dec dec x l') l.
+
+Definition list_subt :=
+  pfilter (λ x, ¬In x l') (λ x, not_dec _ (in_dec dec x l')) l. 
+
+Corollary list_isect_spec x :
+  In x list_isect <-> In x l /\ In x l'.
+Proof.
+apply pfilter_spec.
+Qed.
+
+Corollary list_subt_spec x :
+  In x list_subt <-> In x l /\ ¬In x l'.
+Proof.
+apply pfilter_spec.
+Qed.
+
+Theorem list_subt_length :
+  length list_subt = length l - length list_isect.
+Proof.
+unfold list_subt, list_isect; induction l; simpl pfilter. easy.
+destruct (in_dec dec a l'), (not_dec _ _); try easy.
+simpl length; rewrite IHl0; clear IHl0. remember (pfilter _ _ l0) as l1.
+assert(length l1 <= length l0) by (subst; apply pfilter_length). lia.
+Qed.
+
+Corollary list_isect_length :
+  length list_isect = length l - length list_subt.
+Proof.
+rewrite list_subt_length.
+assert(length list_isect <= length l) by apply pfilter_length. lia.
+Qed.
+
+End List_intersection_and_subtraction.
 
 End List_constructions_using_decidability.
 
@@ -166,4 +226,6 @@ End Option_list_filtering.
 
 End Lemmas_about_lists.
 
+Arguments list_isect {_}.
+Arguments list_subt {_}.
 Arguments remove_None {_}.

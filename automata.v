@@ -100,13 +100,14 @@ revert s t; induction w as [|c w]; simpl; intros.
 Qed.
 
 Theorem Accepts_determine w s :
-  Accepts w s -> Exists (Accepts w) (map (λ t, [t]) s).
+  Accepts w s -> ∃t, In t s /\ Accepts w [t].
 Proof.
 induction s; simpl; intros.
 - exfalso; eapply not_Accepts_nil, H.
 - replace (a :: s) with ([a] ++ s) in H by easy.
-  apply Exists_cons; apply Accepts_app in H as [H|H].
-  now left. right; apply IHs, H.
+  apply Accepts_app in H as [H|H].
+  + exists a; split. now left. easy.
+  + apply IHs in H as [t Ht]; exists t; split. now right. easy.
 Qed.
 
 End Definitions.
@@ -257,8 +258,7 @@ destruct (PQ_can ss_can_a) as [ss_can Hss].
   all: apply Pow_Accepts, Exists_exists; eexists; split; [apply in_eq|].
   (* If Pow accepts w, then A accepts w from a single state s. *)
   all: apply Pow_Accepts, Exists_exists in H as [ss' [R H]]; inv R.
-  all: apply Accepts_determine, Exists_exists in H as [s' [Hs' H]].
-  all: apply in_map_iff in Hs' as [s [R Hs]]; subst.
+  all: apply Accepts_determine in H as [s [Hs H]].
   + (* Determine A-canonical state for s, and apply similarity to H. *)
     destruct (Q_can s) as [s_can Hcan] eqn:s_can_def. apply Hcan in H.
     eapply Accepts_subset. apply H. intros t Ht; inv Ht.
@@ -403,14 +403,13 @@ revert s; induction word as [|c w]; simpl; intros.
   + intros [w [[H1 H2] H3]]. apply length_zero_iff_nil in H1; now subst.
 - split.
   + intros. apply IHw in H as [v [[H1 H2] H3]].
-    apply Accepts_determine, Exists_exists in H3 as [xs [H4 H5]].
-    apply in_map_iff in H4 as [t [R Ht]]; subst.
-    apply in_flat_map in Ht as [t' [Ht' Ht]].
-    apply in_flat_map in Ht as [c' Hc'].
+    apply Accepts_determine in H3 as [t [H Ht]].
+    apply in_flat_map in H as [t' [Ht' H]].
+    apply in_flat_map in H as [c' Hc'].
     exists (c' :: v); repeat split; simpl.
     * now rewrite H1.
     * apply Forall2_cons; easy.
-    * eapply Accepts_subset. apply H5. intros y Hy. inv Hy; try easy.
+    * eapply Accepts_subset. apply Ht. intros y Hy. inv Hy; try easy.
       apply in_flat_map; exists t'; easy.
   + intros [v [[H1 H2] H3]]. destruct v; simpl in *. easy.
     inv H2. apply IHw; exists v; repeat split. lia. easy.
@@ -447,63 +446,85 @@ Section Connectivity.
 
 Variable node : Type.
 Variable adj : node -> list node.
+Variable Terminal : node -> Prop.
+
 Hypothesis dec : ∀v w : node, {v = w} + {v ≠ w}.
+Hypothesis Terminal_dec : ∀v, {Terminal v} + {¬Terminal v}.
 
-(* A node is connected to a target node via a path in graph g. *)
-Inductive Connected g ts : node -> Prop :=
-  | Path_finish v : In v ts -> Connected g ts v
-  | Path_step v w : In w g -> In w (adj v) ->
-                    Connected g ts w -> Connected g ts v.
+(* There exists a path to a terminal node in graph g. *)
+Inductive Path g : node -> Prop :=
+  | Path_finish v : Terminal v -> Path g v
+  | Path_step v w : In w g -> In w (adj v) -> Path g w -> Path g v.
 
-Lemma Connected_weaken g h ts v :
-  (∀x, In x h -> In x g) ->
-  Connected h ts v -> Connected g ts v.
+Lemma Path_subset g g' v :
+  Path g' v -> (∀x, In x g' -> In x g) -> Path g v.
 Proof.
-intros subset C; induction C.
+intros path subset; induction path.
 now apply Path_finish. eapply Path_step.
 apply subset, H. all: easy.
 Qed.
 
-Theorem Connected_dec g ts v :
-  {Connected g ts v} + {¬Connected g ts v}.
+Lemma Path_split g g1 g2 v :
+  Path g v -> (∀x, In x g <-> In x g1 \/ In x g2) ->
+  Exists (Path g1) g2 \/ Path g1 v.
+Proof.
+intros path g_spec; induction path.
+- right; now apply Path_finish.
+- destruct IHpath. now left.
+  apply g_spec in H as [H|H].
+  + right; now apply Path_step with (w:=w).
+  + left; apply Exists_exists; now exists w.
+Qed.
+
+Theorem Path_dec g v :
+  {Path g v} + {¬Path g v}.
 Proof.
 remember (length g) as n; revert Heqn; revert g v.
 apply lt_wf_rect with (n:=n); clear n; intros n IH g v g_len.
 (* Check if v is a target state. *)
-destruct (in_dec dec v ts).
+destruct (Terminal_dec v).
 left; now apply Path_finish.
 (* Determine if there is an intersection between g and adj v. *)
-destruct (list_intersection _ dec g (adj v)) as [gv gv_spec].
+pose(gv := list_isect dec g (adj v)).
 destruct (Nat.eq_dec (length gv) 0).
-- (* There is no connecting node. *)
+- (* No path exists since g ∩ adj v = ∅. *)
   right; intros HC; inv HC. apply in_nil with (a:=w).
   apply length_zero_iff_nil in e; rewrite <-e.
-  now apply gv_spec.
-- (* Apparently g is not empty. *)
+  now apply list_isect_spec.
+- (* Show that g is not empty. *)
   assert(length g ≠ 0). {
-    destruct g, gv; simpl in *; try easy.
-    exfalso; eapply gv_spec; now left. }
-  (* Remove gv from the search space. *)
-  destruct (list_remove_subset _ dec g gv) as [h [h_len h_spec]].
-  intros; apply gv_spec; easy.
-  (* Determine if a connecting node is connected through h. *)
-  destruct (Exists_dec (Connected h ts) gv).
-  intros; eapply IH. 2: rewrite h_len; reflexivity.
-  rewrite <-g_len; lia.
-  + (* A connecting node does exist. *)
-    left. apply Exists_exists in e as [w Hw].
-    apply Path_step with (w:=w). 1-2: apply gv_spec, Hw.
-    apply Connected_weaken with (h:=h).
-    intros; now apply h_spec. easy.
-  + (* No connection exists. *)
-    right.
-    (* This is true, but tricky to prove. *)
-    (* I want to look for a more elegant proof construction. *)
-Admitted.
+    intros H; apply n1. unfold gv; rewrite list_isect_length. lia. }
+  (* Determine if a node in g ∩ adj v is connected through g \ adj v. *)
+  pose(g' := list_subt dec g (adj v)).
+  destruct (Exists_dec (Path g') gv).
+  + (* Decide using the induction hypothesis. *)
+    intros; eapply IH. 2: reflexivity.
+    unfold g'; rewrite g_len, list_subt_length.
+    fold gv; lia.
+  + (* A path exists. *)
+    left. apply Exists_exists in e as [w [H1w H2w]].
+    apply list_isect_spec in H1w.
+    apply Path_step with (w:=w); try easy.
+    eapply Path_subset. apply H2w.
+    intros; eapply list_subt_spec, H0.
+  + (* Any path would yield a contradiction. *)
+    right. intros Hv; apply n2.
+    apply Path_split with (g1:=g')(g2:=gv) in Hv as [Hv|Hv].
+    (* Either we find a path through g', or we find an impossible path. *)
+    easy. exfalso; inv Hv. apply list_subt_spec in H0; easy.
+    (* Show that g = g1 ∪ g2. *)
+    intros w; split; intros.
+    * destruct (in_dec dec w (adj v)).
+      right; now apply list_isect_spec.
+      left; now apply list_subt_spec.
+    * destruct H0.
+      now apply list_subt_spec in H0.
+      now apply list_isect_spec in H0.
+Qed.
 
 End Connectivity.
 
-Arguments Connected {_}.
+Arguments Path {_}.
 
 Variable letters : list letter.
 Hypothesis all_letters : ∀c, In c letters.
@@ -512,27 +533,49 @@ Variable A : automaton letter.
 Hypothesis state_dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
 (* Reduce finding an accepting word to connectivity to an accept state. *)
-Section Connected_accept.
+Section Accepting_path.
  
 Variable Q : list (state A).
 Variable can : state A -> state A.
 Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
 
 Definition Automaton_adj s := map can (flat_map (λ c, trans A c s) letters).
-Definition Connected_accept := Connected Automaton_adj (filter (accept A) Q) Q.
+Definition Accepting_path := Path Automaton_adj (λ s, accept A s = true) Q.
 
-Theorem Connected_accept_iff_ex_Accepts s :
-  Connected_accept s <-> ∃w, Accepts A w [s].
+Theorem Accepting_path_Accepts s :
+  Accepting_path s -> ∃w, Accepts A w [s].
 Proof.
-Admitted.
-
-Corollary Connected_accepts_dec s :
-  {Connected_accept s} + {¬Connected_accept s}.
-Proof.
-apply Connected_dec, state_dec.
+intros path; induction path.
+- exists nil; simpl; now rewrite H.
+- apply in_map_iff in H0 as [s [R Hs]]; subst.
+  apply in_flat_map in Hs as [c [_ Hc]].
+  destruct IHpath as [w Hw].
+  exists (c :: w); simpl; rewrite app_nil_r.
+  eapply Accepts_subset. apply can_spec, Hw.
+  intros s' Hs'; inv Hs'.
 Qed.
 
-End Connected_accept.
+Theorem Accepts_Accepting_path s w :
+  Accepts A w [s] -> Accepting_path s.
+Proof.
+revert s; induction w as [|c w]; simpl; intros.
+- rewrite orb_false_r in H. now apply Path_finish.
+- rewrite app_nil_r in H.
+  apply Accepts_determine in H as [t [Ht Hw]].
+  apply can_spec, IHw in Hw.
+  apply Path_step with (w:=can t). apply can_spec.
+  apply in_map_iff; exists t; split. easy.
+  apply in_flat_map; exists c; easy. easy.
+Qed.
+
+Corollary Accepting_path_dec s :
+  {Accepting_path s} + {¬Accepting_path s}.
+Proof.
+apply Path_dec. apply state_dec.
+intros v; destruct (accept A v); auto.
+Qed.
+
+End Accepting_path.
 
 Variable size : nat.
 Hypothesis A_size : Finite A size.
@@ -542,8 +585,14 @@ Corollary ex_Accepts_dec s :
 Proof.
 destruct A_size as [Q [Q_len can]].
 pose(can_f s := projT1 (can s)).
-destruct (Connected_accepts_dec Q can_f s).
-Admitted.
+assert(can_f_spec : ∀t, In (can_f t) Q /\ Similar A [t] [can_f t]). {
+  intros; unfold can_f; destruct (can t); easy. }
+destruct (Accepting_path_dec Q can_f s).
+- left. eapply Accepting_path_Accepts.
+  apply can_f_spec. easy.
+- right; intros w. eapply contra.
+  apply Accepts_Accepting_path, can_f_spec. easy.
+Qed.
 
 Corollary Language_inhabited_dec :
   {∃w, Language A w} + {∀w, ¬Language A w}.
