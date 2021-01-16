@@ -2,7 +2,7 @@
 
 tactics.v
 notations.v
-lemmas.v
+utilities.v
 
-formula.v
+formulae.v
 automata.v

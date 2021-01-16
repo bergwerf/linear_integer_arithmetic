@@ -1,9 +1,12 @@
-(* Lemmas on various topics. *)
+(* Basic utilities for various purposes. *)
 
 Require Import Utf8 PeanoNat List Lia.
 From larith Require Import tactics notations.
 Import ListNotations.
 
+(******************************************************************************)
+(* I. Laws of constructive propositional and predicate logic.                 *)
+(******************************************************************************)
 Section Laws_of_logic.
 
 Section Propositions.
@@ -54,6 +57,41 @@ End Propositions.
 
 End Laws_of_logic.
 
+(******************************************************************************)
+(* II. Editing arbitrary infinite sequences.                                  *)
+(******************************************************************************)
+Section Editing_sequences.
+
+Variable X : Type.
+
+Definition set n (x : X) Γ i := if i =? n then x else Γ i.
+
+Variable Γ : nat -> X.
+Variable i j k : nat.
+Variable x y : X.
+
+Lemma set_override :
+  set i x (set i y Γ) k = set i x Γ k.
+Proof.
+unfold set; now destruct (k =? i).
+Qed.
+
+Lemma set_swap :
+  i ≠ j -> set i x (set j y Γ) k = set j y (set i x Γ) k.
+Proof.
+unfold set; destruct (k =? i) eqn:I, (k =? j) eqn:J; try easy.
+b_Prop; subst; easy.
+Qed.
+
+End Editing_sequences.
+
+Arguments set {_}.
+Notation "α ;; n ↦ x" := (set n x α)
+  (at level 25, left associativity, format "α ;; n ↦ x").
+
+(******************************************************************************)
+(* III. Various list utilities.                                               *)
+(******************************************************************************)
 Section Lemmas_about_lists.
 
 Lemma list_prod_nil_r {X Y} (l : list X) :

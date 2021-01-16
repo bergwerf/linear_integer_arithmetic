@@ -1,7 +1,7 @@
 (* Basic theory of automata. *)
 
 Require Import Utf8 Bool PeanoNat Wf_nat List Lia.
-From larith Require Import tactics notations lemmas.
+From larith Require Import tactics notations utilities.
 Import ListNotations.
 
 Record automaton (letter : Set) := Automaton {
@@ -40,29 +40,6 @@ Definition Similar s t := ∀w, Accepts w s <-> Accepts w t.
 (* There is an effective procedure to point out a canonical state. *)
 Definition Finite n := Σ Q, (length Q = n) ×
   (∀s : state A, Σ can, In can Q /\ Similar [s] [can]).
-
-(*
-A note on efficiency.
----------------------
-I do not expect my implementation of the automata-based decision procedure to be
-efficient, but I try to stick to efficient definitions unless they introduce too
-much complexity. The previous definition of Finite is fairly simple. The Similar
-predicate is added to allow an infinite state domain (this is useful for the
-powerset construction which uses arbitrary lists).
-
-However, because of the determinization needed ater projection, the size of
-automata will be huge even for fairly small formulae. A more efficient
-enumeration of states could use binary numbers, for example:
-
-```
-Definition Effectively_Finite := Σ Q (n : N),
-  ∀s : state A, ∃i, N.lt i n /\ Similar s (Q i).
-```
-
-But the benefits of this are unclear. And I am not sure if the decision
-algorithm can ever run reasonably efficiently in Coq anyway. I might implement
-the algorithm in a procedural language after I finished verifying it.
-*)
 
 Theorem not_Accepts_nil w :
   ¬Accepts w [].
