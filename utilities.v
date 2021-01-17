@@ -234,16 +234,17 @@ Section Nth_element_of_a_mapped_list.
 
 Variable X Y : Type.
 Variable f : X -> Y.
-Hypothesis f_inj : ∀x x', f x = f x' -> x = x'.
 
-Lemma nth_map1 i Γ d x :
+Lemma nth_map i Γ d x :
   nth i Γ d = x -> nth i (map f Γ) (f d) = f x.
 Proof.
 revert i; induction Γ; destruct i; simpl.
 1-3: congruence. apply IHΓ.
 Qed.
 
-Lemma nth_map2 i Γ d x :
+Hypothesis f_inj : ∀x x', f x = f x' -> x = x'.
+
+Lemma nth_map_inj i Γ d x :
   nth i (map f Γ) (f d) = f x -> nth i Γ d = x.
 Proof.
 revert i; induction Γ; destruct i; simpl.

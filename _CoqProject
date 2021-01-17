@@ -6,4 +6,5 @@ utilities.v
 
 formulae.v
 automata.v
-binary.v
+binmodel.v
+deciders.v
