@@ -49,6 +49,8 @@ Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
 
 Section Lemmas_about_realization.
 
+Section Same_domain.
+
 Variable dom atomA atomB : Type.
 Variable A : model atomA dom.
 Variable B : model atomB dom.
@@ -69,6 +71,34 @@ Proof.
 intros eqv1 eqv2; simpl; split; intros H.
 all: split; [apply eqv1|apply eqv2]; apply H.
 Qed.
+
+End Same_domain.
+
+Section Same_atoms.
+
+Variable domA domB atom : Type.
+Variable A : model atom domA.
+Variable B : model atom domB.
+Variable f : domA -> domB.
+Hypothesis f_surj : ∀y, ∃x, f x = y.
+
+Theorem similar_models :
+  (∀a Γ, A Γ a <-> B (map f Γ) a) ->
+  ∀φ Γ, A |= (φ)[Γ] <-> B |= (φ)[map f Γ].
+Proof.
+intros eqv; induction φ; simpl; intros.
+- apply eqv.
+- split; intros H.
+  all: split; [apply IHφ1|apply IHφ2]; apply H.
+- split; apply contra, IHφ.
+- split.
+  + intros [x Hx]; exists (f x).
+    rewrite <-map_cons; apply IHφ, Hx.
+  + intros [y Hy]. destruct (f_surj y) as [x R]; subst.
+    exists x; apply IHφ, Hy.
+Qed.
+
+End Same_atoms.
 
 End Lemmas_about_realization.
 
