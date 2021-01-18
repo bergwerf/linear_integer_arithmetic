@@ -9,7 +9,10 @@ Import ListNotations.
 (* Definition of a regular predicate. *)
 Section Regular_predicates.
 
-Record regular (letter : Set) (P : list letter -> Prop) := Regular {
+Variable letter : Set.
+Variable P : list letter -> Prop.
+
+Record regular := Regular {
   r_automaton : automaton letter;
   r_size      : nat;
   r_finite    : Finite r_automaton r_size;
@@ -17,11 +20,19 @@ Record regular (letter : Set) (P : list letter -> Prop) := Regular {
   r_spec      : ∀w, Language r_automaton w <-> P w;
 }.
 
-(* Regular predicates can be decided. *)
-Theorem regular_dec letter P :
-  regular letter P -> {∃w, P w} + {∀w, ¬P w}.
+(* Regular predicates over a finite alphabet can be decided. *)
+Variable alphabet : list letter.
+Hypothesis full_alphabet : ∀c, In c alphabet.
+Hypothesis is_regular : regular.
+
+Theorem regular_dec :
+  {∃w, P w} + {∀w, ¬P w}.
 Proof.
-Admitted.
+destruct is_regular as [A n size dec spec].
+eapply dec_replace. apply spec.
+eapply Language_inhabited_dec.
+apply full_alphabet. apply dec. apply size.
+Qed.
 
 End Regular_predicates.
 

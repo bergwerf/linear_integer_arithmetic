@@ -503,8 +503,8 @@ End Connectivity.
 
 Arguments Path {_}.
 
-Variable letters : list letter.
-Hypothesis all_letters : ∀c, In c letters.
+Variable alphabet : list letter.
+Hypothesis full_alphabet : ∀c, In c alphabet.
 
 Variable A : automaton letter.
 Hypothesis state_dec : ∀s t : state A, {s = t} + {s ≠ t}.
@@ -516,7 +516,7 @@ Variable Q : list (state A).
 Variable can : state A -> state A.
 Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
 
-Definition Automaton_adj s := map can (flat_map (λ c, trans A c s) letters).
+Definition Automaton_adj s := map can (flat_map (λ c, trans A c s) alphabet).
 Definition Accepting_path := Path Automaton_adj (λ s, accept A s = true) Q.
 
 Theorem Accepting_path_Accepts s :

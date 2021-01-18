@@ -55,6 +55,23 @@ Qed.
 
 End Propositions.
 
+Section Predicates.
+
+Variable X : Type.
+Variable P Q : X -> Prop.
+
+Lemma dec_replace :
+  (∀x, P x <-> Q x) ->
+  {∃x, P x} + {∀x, ¬P x} ->
+  {∃x, Q x} + {∀x, ¬Q x}.
+Proof.
+intros H [H'|H']; [left|right].
+- destruct H'; exists x; apply H, H0.
+- intros; eapply contra. apply H. apply H'.
+Qed.
+
+End Predicates.
+
 End Laws_of_logic.
 
 (******************************************************************************)
