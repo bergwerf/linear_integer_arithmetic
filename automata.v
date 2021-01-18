@@ -5,10 +5,10 @@ From larith Require Import tactics notations utilities.
 Import ListNotations.
 
 Record automaton (letter : Set) := Automaton {
-  state : Type;
-  start : state;
+  state  : Set;
+  start  : state;
   accept : state -> bool;
-  trans : letter -> state -> list state;
+  trans  : letter -> state -> list state;
 }.
 
 Arguments state {_}.
@@ -361,18 +361,18 @@ End Complementation.
 Section Projection.
 
 Variable A : automaton letter.
-Variable image : Set.
-Variable proj : image -> list letter.
+Variable new_letter : Set.
+Variable proj : new_letter -> list letter.
 
 Definition Proj_trans i s := flat_map (λ c, trans A c s) (proj i).
-Definition Proj := Automaton image _ (start A) (accept A) Proj_trans.
+Definition Proj := Automaton new_letter _ (start A) (accept A) Proj_trans.
 
-(* The pre-image of a word in the image. *)
-Definition Pre_image word pre :=
-  length pre = length word /\ Forall2 (@In letter) pre (map proj word).
+(* The image of a word in the original automaton A. *)
+Definition Proj_image word image :=
+  length image = length word /\ Forall2 (@In letter) image (map proj word).
 
 Theorem Proj_Accepts word s :
-  Accepts Proj word s <-> ∃pre, Pre_image word pre /\ Accepts A pre s.
+  Accepts Proj word s <-> ∃image, Proj_image word image /\ Accepts A image s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - split.
@@ -397,7 +397,7 @@ revert s; induction word as [|c w]; simpl; intros.
 Qed.
 
 Corollary Proj_spec word :
-  Language Proj word <-> ∃pre, Pre_image word pre /\ Language A pre.
+  Language Proj word <-> ∃image, Proj_image word image /\ Language A image.
 Proof.
 intros; apply Proj_Accepts.
 Qed.

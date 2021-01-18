@@ -7,4 +7,4 @@ utilities.v
 formulae.v
 automata.v
 binmodel.v
-deciders.v
+automatic.v
