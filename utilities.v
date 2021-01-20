@@ -38,6 +38,25 @@ Proof.
 split; auto. now intros [H1 H2] [H|H].
 Qed.
 
+Lemma and_remove_r :
+  Q -> P /\ Q <-> P.
+Proof.
+easy.
+Qed.
+
+Lemma or_remove_r :
+  ¬Q -> P \/ Q <-> P.
+Proof.
+intros nQ; split; intros.
+now destruct H. now left.
+Qed.
+
+Lemma exfalso_iff :
+  ¬P -> ¬Q -> P <-> Q.
+Proof.
+easy.
+Qed.
+
 Variable P_dec : {P} + {¬P}.
 Variable Q_dec : {Q} + {¬Q}.
 

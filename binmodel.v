@@ -1,7 +1,8 @@
 (* Models using binary numbers. *)
 
 Require Vector.
-Require Import Utf8 Bool Nat PeanoNat BinNat Nnat List.
+Require Import Utf8 Bool Nat List.
+Require Import PeanoNat BinNat BinPos Nnat.
 From larith Require Import tactics notations utilities.
 From larith Require Import formulae automata automatic.
 Import ListNotations.
@@ -46,24 +47,72 @@ Qed.
 (* Translate lists of booleans to a binary number. *)
 Section Least_significant_bit_first_binary_coding.
 
-Fixpoint binnum (l : list bool) :=
-  match l with
+Fixpoint bnum (bits : list bool) :=
+  match bits with
   | []      => 0%N
-  | b :: l' =>
-    match (binnum l') with
+  | b :: bs =>
+    match (bnum bs) with
     | 0%N     => if b then 1%N else 0%N
-    | N.pos p => N.pos (if b then xI p else xO p)
+    | N.pos p => N.pos (if b then p~1 else p~0)
     end
   end.
+
+Theorem bnum_cons_eq_one l :
+  bnum (true :: l) = 1%N <-> bnum l = 0%N.
+Proof.
+simpl. destruct (bnum l); easy.
+Qed.
+
+Theorem bnum_cons_compare x xs y ys :
+  (bnum (x :: xs) ?= bnum (y :: ys) =
+  Pos.switch_Eq (Bool.compare x y) (bnum xs ?= bnum ys))%N.
+Proof.
+simpl; destruct x, y, (bnum xs), (bnum ys); simpl; try easy.
+1: rewrite Pos.compare_xI_xI. 4: rewrite Pos.compare_xO_xO.
+3: apply Pos.compare_xO_xI. 2: apply Pos.compare_xI_xO.
+all: now destruct (p ?= p0)%positive.
+Qed.
+
+Corollary bnum_cons_eq x xs y ys :
+  bnum (x :: xs) = bnum (y :: ys) <-> x = y /\ bnum xs = bnum ys.
+Proof.
+rewrite <-?N.compare_eq_iff, bnum_cons_compare.
+now destruct x, y, (bnum xs ?= bnum ys)%N.
+Qed.
+
+Corollary bnum_cons_le x xs y ys :
+  (bnum (x :: xs) <= bnum (y :: ys) <->
+  bnum xs < bnum ys \/ bnum xs = bnum ys /\ Bool.le x y)%N.
+Proof.
+rewrite <-?N.compare_le_iff, <-N.compare_lt_iff;
+rewrite <-N.compare_eq_iff, bnum_cons_compare.
+destruct x, y, (bnum xs ?= bnum ys)%N eqn:H; simpl.
+all: try (rewrite and_remove_r; [|easy]).
+all: try (rewrite or_remove_r; [|easy]).
+all: try (rewrite or_comm, or_remove_r; [|easy]).
+all: try easy.
+Qed.
+
+Corollary bnum_cons_lt x xs y ys :
+  (bnum (x :: xs) < bnum (y :: ys) <->
+  bnum xs < bnum ys \/ bnum xs = bnum ys /\ Bool.lt x y)%N.
+Proof.
+rewrite <-?N.compare_lt_iff, <-N.compare_eq_iff, bnum_cons_compare.
+destruct x, y, (bnum xs ?= bnum ys)%N eqn:H; simpl.
+all: try (rewrite and_remove_r; [|easy]).
+all: try (rewrite or_remove_r; [|easy]).
+all: try (rewrite or_comm, or_remove_r; [|easy]).
+all: try easy.
+Qed.
 
 End Least_significant_bit_first_binary_coding.
 
 (* All r_atom formulas are regular. *)
 Section Regular_relations.
 
-Notation ctx := (vctx _ binnum).
+Notation ctx := (vctx _ bnum).
 Notation iffb := (Bool.eqb).
-Notation "! b" := (negb b) (at level 40, format "! b").
+Notation "! b" := (negb b) (at level 20, format "! b").
 Notation "l :0" := (map fst l) (left associativity, at level 40, format "l :0").
 Notation "l :1" := (map snd l) (left associativity, at level 40, format "l :1").
 
@@ -116,32 +165,65 @@ intros [|]; simpl; auto.
 Qed.
 
 Theorem dfa_zero_spec w :
-  Language dfa_zero w <-> binnum w = 0%N.
+  Language dfa_zero w <-> bnum w = 0%N.
 Proof.
 unfold Language; simpl.
 induction w; simpl. easy.
-destruct a, (binnum w); simpl; split; try easy.
+destruct a, (bnum w); simpl; split; try easy.
 1,2: intros H; now apply not_Accepts_nil in H.
 apply IHw. intros H; apply IHw in H; easy.
 Qed.
 
-Theorem dfa_one_spec w :
-  Language dfa_one w <-> binnum w = 1%N.
+Lemma dfa_one_tail_spec w :
+  Accepts dfa_one w [true] <-> Language dfa_zero w.
 Proof.
-Admitted.
+unfold Language; induction w; simpl. easy. destruct a; simpl.
+split; intros H; now apply not_Accepts_nil in H. apply IHw.
+Qed.
+
+Theorem dfa_one_spec w :
+  Language dfa_one w <-> bnum w = 1%N.
+Proof.
+unfold Language; destruct w. easy. destruct b.
+- rewrite bnum_cons_eq_one. simpl. rewrite dfa_one_tail_spec.
+  apply dfa_zero_spec.
+- split; simpl. intros H; now apply not_Accepts_nil in H.
+  now destruct (bnum w).
+Qed.
 
 Theorem dfa_eq_spec w :
-  Language dfa_eq w <-> binnum (w:0) = binnum (w:1).
+  Language dfa_eq w <-> bnum (w:0) = bnum (w:1).
 Proof.
-Admitted.
+unfold Language; induction w. easy.
+simpl in IHw; simpl Accepts; rewrite app_nil_r.
+simpl map. rewrite bnum_cons_eq.
+destruct a as [[|] [|]]; simpl.
+1,4: rewrite and_comm, and_remove_r; [apply IHw|easy].
+all: apply exfalso_iff; [apply not_Accepts_nil|easy].
+Qed.
 
-Theorem dfa_le_spec w :
-  Language dfa_le w <-> (binnum (w:0) <= binnum (w:1))%N.
+Theorem dfa_le_Accepts w b :
+  Accepts dfa_le w [b] <-> (if b then N.le else N.lt) (bnum (w:0)) (bnum (w:1)).
 Proof.
-Admitted.
+revert b; induction w; destruct b.
+1-2: easy. all: simpl Accepts; simpl map.
+1: rewrite bnum_cons_le.
+2: rewrite bnum_cons_lt.
+all: destruct a as [[|] [|]]; simpl.
+all: try (rewrite and_remove_r; [|easy]).
+all: try (rewrite or_remove_r; [|easy]).
+1,3,4,7: rewrite <-N.lt_eq_cases.
+all: apply IHw.
+Qed.
+
+Corollary dfa_le_spec w :
+  Language dfa_le w <-> (bnum (w:0) <= bnum (w:1))%N.
+Proof.
+apply dfa_le_Accepts.
+Qed.
 
 Theorem dfa_add_spec w :
-  Language dfa_add w <-> (binnum (w:0:0) + binnum (w:0:1) = binnum (w:1))%N.
+  Language dfa_add w <-> (bnum (w:0:0) + bnum (w:0:1) = bnum (w:1))%N.
 Proof.
 Admitted.
 
