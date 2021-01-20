@@ -1,7 +1,7 @@
 (* Models using binary numbers. *)
 
 Require Vector.
-Require Import Utf8 Bool Nat List.
+Require Import Utf8 Bool Nat List Lia.
 Require Import PeanoNat BinNat BinPos Nnat.
 From larith Require Import tactics notations utilities.
 From larith Require Import formulae automata automatic.
@@ -45,7 +45,7 @@ apply similar_models; clear Γ.
 Qed.
 
 (* Translate lists of booleans to a binary number. *)
-Section Least_significant_bit_first_binary_coding.
+Section Least_significant_bit_first_binary_numbers.
 
 Fixpoint bnum (bits : list bool) :=
   match bits with
@@ -57,10 +57,16 @@ Fixpoint bnum (bits : list bool) :=
     end
   end.
 
-Theorem bnum_cons_eq_one l :
+Theorem bnum_cons x xs :
+  (bnum (x :: xs) = bnum [x] + 2 * (bnum xs))%N.
+Proof.
+simpl; now destruct x, (bnum xs).
+Qed.
+
+Corollary bnum_cons_eq_one l :
   bnum (true :: l) = 1%N <-> bnum l = 0%N.
 Proof.
-simpl. destruct (bnum l); easy.
+rewrite bnum_cons; simpl bnum. lia.
 Qed.
 
 Theorem bnum_cons_compare x xs y ys :
@@ -105,7 +111,7 @@ all: try (rewrite or_comm, or_remove_r; [|easy]).
 all: try easy.
 Qed.
 
-End Least_significant_bit_first_binary_coding.
+End Least_significant_bit_first_binary_numbers.
 
 (* All r_atom formulas are regular. *)
 Section Regular_relations.
@@ -136,12 +142,12 @@ Definition dfa_add_trans xyz (c : bool) :=
   match xyz with
   | ((x, y), z) =>
     let sum := iffb (iffb x y) c in
-    let carry := if c then x && y else x || y in
+    let carry := if c then x || y else x && y in
     if iffb sum z then [carry] else []
   end.
 
 Definition dfa_add :=
-  Automaton ((bool × bool) × bool) bool true id dfa_add_trans.
+  Automaton ((bool × bool) × bool) bool false negb dfa_add_trans.
 
 Lemma finite_type {letter} (A : automaton letter) n :
   (Σ Q, length Q = n /\ ∀s : state A, In s Q) -> Finite A n.
@@ -202,11 +208,12 @@ destruct a as [[|] [|]]; simpl.
 all: apply exfalso_iff; [apply not_Accepts_nil|easy].
 Qed.
 
-Theorem dfa_le_Accepts w b :
-  Accepts dfa_le w [b] <-> (if b then N.le else N.lt) (bnum (w:0)) (bnum (w:1)).
+Theorem dfa_le_Accepts w eq :
+  Accepts dfa_le w [eq] <->
+  (if eq then N.le else N.lt) (bnum (w:0)) (bnum (w:1)).
 Proof.
-revert b; induction w; destruct b.
-1-2: easy. all: simpl Accepts; simpl map.
+revert eq; induction w; destruct eq.
+1,2: easy. all: simpl Accepts; simpl map.
 1: rewrite bnum_cons_le.
 2: rewrite bnum_cons_lt.
 all: destruct a as [[|] [|]]; simpl.
@@ -222,10 +229,27 @@ Proof.
 apply dfa_le_Accepts.
 Qed.
 
-Theorem dfa_add_spec w :
+Theorem dfa_add_Accepts w c :
+  Accepts dfa_add w [c] <->
+  (bnum (w:0:0) + bnum (w:0:1) + bnum [c] = bnum (w:1))%N.
+Proof.
+revert c; induction w as [|[[x y] z] w]; intros. now destruct c.
+simpl map; rewrite (bnum_cons x), (bnum_cons y), (bnum_cons z).
+remember (bnum (w:0:0)) as xN;
+remember (bnum (w:0:1)) as yN;
+remember (bnum (w:1)) as zN.
+assert(Accepts dfa_add w [] <-> False) by (split; [apply not_Accepts_nil|easy]).
+destruct c, x, y, z; simpl Accepts; simpl bnum.
+1,4,6,7,10,11,13,16: rewrite IHw; simpl bnum; lia.
+all: rewrite H; lia.
+Qed.
+
+Corollary dfa_add_spec w :
   Language dfa_add w <-> (bnum (w:0:0) + bnum (w:0:1) = bnum (w:1))%N.
 Proof.
-Admitted.
+unfold Language; rewrite dfa_add_Accepts.
+simpl; now rewrite N.add_0_r.
+Qed.
 
 Lemma regular_R_zero i :
   regular (vec (S i)) (λ w, BinR (ctx w) (R_zero i)).
