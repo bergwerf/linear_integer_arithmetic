@@ -368,29 +368,27 @@ Definition Proj_trans i s := flat_map (λ c, trans A c s) (proj i).
 Definition Proj := Automaton new_letter _ (start A) (accept A) Proj_trans.
 
 (* The image of a word in the original automaton A. *)
-Definition Proj_image word image :=
-  length image = length word /\ Forall2 (@In letter) image (map proj word).
+Definition Proj_image word image := Forall2 (@In letter) image (map proj word).
 
 Theorem Proj_Accepts word s :
   Accepts Proj word s <-> ∃image, Proj_image word image /\ Accepts A image s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - split.
-  + exists nil; repeat split; simpl; easy.
-  + intros [w [[H1 H2] H3]]. apply length_zero_iff_nil in H1; now subst.
+  + exists nil; split. apply Forall2_nil. easy.
+  + intros [w [H1 H2]]; inv H1.
 - split.
-  + intros. apply IHw in H as [v [[H1 H2] H3]].
-    apply Accepts_determine in H3 as [t [H Ht]].
+  + intros. apply IHw in H as [v [H1 H2]].
+    apply Accepts_determine in H2 as [t [H Ht]].
     apply in_flat_map in H as [t' [Ht' H]].
     apply in_flat_map in H as [c' Hc'].
-    exists (c' :: v); repeat split; simpl.
-    * now rewrite H1.
-    * apply Forall2_cons; easy.
+    exists (c' :: v); simpl; split.
+    * now apply Forall2_cons.
     * eapply Accepts_subset. apply Ht. intros y Hy. inv Hy; try easy.
       apply in_flat_map; exists t'; easy.
-  + intros [v [[H1 H2] H3]]. destruct v; simpl in *. easy.
-    inv H2. apply IHw; exists v; repeat split. lia. easy.
-    eapply Accepts_subset. apply H3. intros t Ht.
+  + intros [v [H1 H2]]. destruct v; simpl in *. easy.
+    inv H1. apply IHw; exists v; repeat split. easy.
+    eapply Accepts_subset. apply H2. intros t Ht.
     apply in_flat_map in Ht as [t' Ht].
     apply in_flat_map; exists t'; split. easy.
     apply in_flat_map; exists l; easy.

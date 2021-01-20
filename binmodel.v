@@ -76,12 +76,27 @@ eapply Regular with (r_automaton:=A).
   easy. destruct a, (binnum w); simpl; split; try easy.
   1,2: intros H; now apply not_Accepts_nil in H.
   apply IHw. intros H; apply IHw in H; easy.
-Qed.
+Defined.
 
 Corollary regular_R_zero i :
   regular (vec (S i)) (λ w, BinR (ctx w) (R_zero i)).
 Proof.
-(* Somehow, generalize the result from regular_binnum_zero. *)
-Abort.
+destruct fin with (n:=S i)(i:=i) as [ith ith_i]. auto.
+destruct regular_binnum_zero.
+pose(A := Proj _ r_automaton _ (λ v : vec (S i), [proj ith v])).
+eapply Regular with (r_automaton:=A).
+- apply Proj_size, r_finite.
+- apply r_dec.
+- intros w; rewrite <-ith_i at 3; simpl.
+  unfold A; rewrite Proj_spec; unfold Proj_image; split.
+  + intros [img [H1 H2]]. apply r_spec in H2.
+    rewrite map_map_singleton in H1.
+    apply Forall2_In_singleton in H1; subst.
+    now rewrite vctx_nth, transpose_nth.
+  + intros. rewrite vctx_nth in H.
+    exists (map (proj ith) w); split.
+    * rewrite map_map_singleton. now apply Forall2_In_singleton.
+    * apply r_spec. now rewrite transpose_nth in H.
+Defined.
 
 End Regular_relations.

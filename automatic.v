@@ -63,18 +63,25 @@ Section Matrix_transposition.
 Variable T : Type.
 
 (* Convert from a list of collumn vectors to a vector of row lists. *)
-Fixpoint transpose {n} (w : list (Vector.t T n)) : Vector.t (list T) n :=
-  match w with
-  | [] => Vector.const [] n
-  | v :: w' => Vector.map2 cons v (transpose w')
+Fixpoint transpose {n} (mat : list (Vector.t T n)) : Vector.t (list T) n :=
+  match mat with
+  | []     => Vector.const [] n
+  | v :: m => Vector.map2 cons v (transpose m)
   end.
 
-Theorem transpose_cons {n} (w : list (Vector.t T (S n))) :
-  transpose w = map Vector.hd w ;; transpose (map Vector.tl w).
+Theorem transpose_cons {n} (mat : list (Vector.t T (S n))) :
+  transpose mat = map Vector.hd mat ;; transpose (map Vector.tl mat).
 Proof.
-induction w; simpl. easy.
+induction mat; simpl. easy.
 apply Vector.caseS' with (v:=a).
-intros; now rewrite IHw.
+intros; now rewrite IHmat.
+Qed.
+
+Theorem transpose_nth {n} (mat : list (Vector.t T n)) (i : Fin.t n)  :
+  Vector.nth (transpose mat) i = map (λ v, Vector.nth v i) mat.
+Proof.
+induction mat; simpl. now induction i.
+rewrite <-IHmat. apply Vector_nth_map2_cons.
 Qed.
 
 End Matrix_transposition.
@@ -89,7 +96,13 @@ Variable value : list bool -> domain.
 Variable Model : model atom domain.
 
 Definition vctx {n} (w : list (vec n)) : list domain :=
-  map value (Vector.to_list (transpose w)).
+  Vector.to_list (Vector.map value (transpose w)).
+
+Lemma vctx_nth {n} (w : list (vec n)) i d :
+  nth (findex i) (vctx w) d = value (Vector.nth (transpose w) i).
+Proof.
+unfold vctx. rewrite Vector_nth_to_list. apply Vector_nth_map.
+Qed.
 
 Hypothesis hypothesis :
   ∀a, Σ n, regular (vec n) (λ w, Model (vctx w) a).

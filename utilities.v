@@ -1,5 +1,6 @@
 (* Basic utilities for various purposes. *)
 
+Require Vector.
 Require Import Utf8 PeanoNat List Lia.
 From larith Require Import tactics notations.
 Import ListNotations.
@@ -96,6 +97,20 @@ Lemma list_singleton {X} (l : list X) :
 Proof.
 intros. destruct l. easy. destruct l.
 now exists x. easy.
+Qed.
+
+Lemma map_map_singleton {X Y} (f : X -> Y) xs :
+  map (λ x, [f x]) xs = map (λ y, [y]) (map f xs).
+Proof.
+now rewrite map_map.
+Qed.
+
+Lemma Forall2_In_singleton {X} (l l' : list X) :
+  Forall2 (@In _) l (map (λ x, [x]) l') <-> l = l'.
+Proof.
+revert l'; induction l, l'; simpl; try easy. split; intros.
+- inv H. inv H3. apply IHl in H5; now subst.
+- apply Forall2_cons. left; congruence. apply IHl; congruence. 
 Qed.
 
 Section List_constructions_using_decidability.
@@ -271,6 +286,51 @@ Qed.
 End Nth_element_of_a_mapped_list.
 
 End Lemmas_about_lists.
+
+Section Lemmas_about_vectors.
+
+Variable T : Type.
+
+Lemma fin n i :
+  i < n -> Σ ith : Fin.t n, findex ith = i.
+Proof.
+intros ith. exists (Fin.of_nat_lt ith).
+now rewrite Fin.to_nat_of_nat.
+Qed.
+
+Lemma findex_S {n} (i : Fin.t n) :
+  findex (Fin.FS i) = S (findex i).
+Proof.
+simpl; destruct (Fin.to_nat i).
+simpl; easy.
+Qed.
+
+Lemma Vector_nth_to_list {n} (v : Vector.t T n) (i : Fin.t n) d :
+  nth (findex i) (Vector.to_list v) d = Vector.nth v i.
+Proof.
+induction v. easy.
+eapply Fin.caseS' with (p:=i). easy.
+intros j. rewrite findex_S. apply IHv.
+Qed.
+
+Lemma Vector_nth_map {n T'} (f : T -> T') (v : Vector.t T n) (i : Fin.t n) :
+  Vector.nth (Vector.map f v) i = f (Vector.nth v i).
+Proof.
+induction v. easy.
+now apply Fin.caseS' with (p:=i).
+Qed.
+
+Lemma Vector_nth_map2_cons {n} (hs : Vector.t T n) ts i :
+  Vector.nth (Vector.map2 cons hs ts) i =
+  Vector.nth hs i :: Vector.nth ts i.
+Proof.
+induction ts as [|t n ts]. easy.
+apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
+simpl Vector.map2. eapply Fin.caseS' with (p:=i); simpl.
+easy. apply IHts.
+Qed.
+
+End Lemmas_about_vectors.
 
 Arguments list_isect {_}.
 Arguments list_subt {_}.
