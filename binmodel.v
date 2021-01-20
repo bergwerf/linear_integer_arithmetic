@@ -1,7 +1,7 @@
 (* Models using binary numbers. *)
 
 Require Vector.
-Require Import Utf8 PeanoNat BinNat Nnat List.
+Require Import Utf8 Bool Nat PeanoNat BinNat Nnat List.
 From larith Require Import tactics notations utilities.
 From larith Require Import formulae automata automatic.
 Import ListNotations.
@@ -12,7 +12,7 @@ Definition BinR (Γ : list N) (a : r_atom) :=
   match a with
   | R_zero i    => f i = 0
   | R_one i     => f i = 1
-  | R_add i j k => f i = f j + f k
+  | R_add i j k => f i + f j = f k
   | R_eq i j    => f i = f j
   | R_le i j    => f i <= f j
   end)%N.
@@ -28,8 +28,8 @@ apply similar_models; clear Γ.
   + replace 1%N with (N.of_nat 1) by easy.
     split. apply nth_map. apply nth_map_inj, Nat2N.inj.
   + split; intros.
-    * erewrite ?nth_map. apply Nat2N.inj_add.
-      1,2: reflexivity. easy.
+    * erewrite ?nth_map. symmetry; apply Nat2N.inj_add.
+      symmetry; apply H. all: easy.
     * erewrite ?nth_map in H.
       rewrite <-Nat2N.inj_add in H; apply Nat2N.inj in H.
       apply H. all: easy.
@@ -62,41 +62,138 @@ End Least_significant_bit_first_binary_coding.
 Section Regular_relations.
 
 Notation ctx := (vctx _ binnum).
+Notation iffb := (Bool.eqb).
+Notation "! b" := (negb b) (at level 40, format "! b").
+Notation "l :0" := (map fst l) (left associativity, at level 40, format "l :0").
+Notation "l :1" := (map snd l) (left associativity, at level 40, format "l :1").
 
-Theorem regular_binnum_zero :
-  regular bool (λ w, binnum w = N0).
+Definition dfa_zero :=
+  Automaton bool unit tt (λ _, true)
+  (λ c _, if c then [] else [tt]).
+
+Definition dfa_one :=
+  Automaton bool bool false id
+  (λ c s, if xorb c s then [true] else []).
+
+Definition dfa_eq :=
+  Automaton (bool × bool) unit tt (λ _, true)
+  (λ c _, if iffb (fst c) (snd c) then [tt] else []).
+
+Definition dfa_le :=
+  Automaton (bool × bool) bool true id
+  (λ c s, [let (l, r) := c in if s then !(l && !r) else !l && r]).
+
+Definition dfa_add_trans xyz (c : bool) :=
+  match xyz with
+  | ((x, y), z) =>
+    let sum := iffb (iffb x y) c in
+    let carry := if c then x && y else x || y in
+    if iffb sum z then [carry] else []
+  end.
+
+Definition dfa_add :=
+  Automaton ((bool × bool) × bool) bool true id dfa_add_trans.
+
+Lemma finite_type {letter} (A : automaton letter) n :
+  (Σ Q, length Q = n /\ ∀s : state A, In s Q) -> Finite A n.
 Proof.
-pose(A := Automaton bool unit tt (λ _, true) (λ c _, if c then [] else [tt])).
-eapply Regular with (r_automaton:=A).
-- exists [tt]; simpl; split. reflexivity.
-  intros s; exists s; destruct s; split. now left. easy.
-- left; now destruct s, t.
-- unfold Language; simpl.
-  intros w; induction w; simpl.
-  easy. destruct a, (binnum w); simpl; split; try easy.
-  1,2: intros H; now apply not_Accepts_nil in H.
-  apply IHw. intros H; apply IHw in H; easy.
-Defined.
+intros [Q [Q_len Q_spec]]; exists Q; split. easy.
+intros s; exists s; easy.
+Qed.
 
-Corollary regular_R_zero i :
+Lemma finite_unit :
+  Σ Q, length Q = 1 /\ ∀v : unit, In v Q.
+Proof.
+exists [tt]. split. easy.
+intros []; apply in_eq.
+Qed.
+
+Lemma finite_bool :
+  Σ Q, length Q = 2 /\ ∀b : bool, In b Q.
+Proof.
+exists [true; false]. split. easy.
+intros [|]; simpl; auto.
+Qed.
+
+Theorem dfa_zero_spec w :
+  Language dfa_zero w <-> binnum w = 0%N.
+Proof.
+unfold Language; simpl.
+induction w; simpl. easy.
+destruct a, (binnum w); simpl; split; try easy.
+1,2: intros H; now apply not_Accepts_nil in H.
+apply IHw. intros H; apply IHw in H; easy.
+Qed.
+
+Theorem dfa_one_spec w :
+  Language dfa_one w <-> binnum w = 1%N.
+Proof.
+Admitted.
+
+Theorem dfa_eq_spec w :
+  Language dfa_eq w <-> binnum (w:0) = binnum (w:1).
+Proof.
+Admitted.
+
+Theorem dfa_le_spec w :
+  Language dfa_le w <-> (binnum (w:0) <= binnum (w:1))%N.
+Proof.
+Admitted.
+
+Theorem dfa_add_spec w :
+  Language dfa_add w <-> (binnum (w:0:0) + binnum (w:0:1) = binnum (w:1))%N.
+Proof.
+Admitted.
+
+Lemma regular_R_zero i :
   regular (vec (S i)) (λ w, BinR (ctx w) (R_zero i)).
 Proof.
 destruct fin with (n:=S i)(i:=i) as [ith ith_i]. auto.
-destruct regular_binnum_zero.
-pose(A := Proj _ r_automaton _ (λ v : vec (S i), [proj ith v])).
+pose(A := Automata.proj _ dfa_zero _ (λ v : vec (S i), [proj ith v])).
 eapply Regular with (r_automaton:=A).
-- apply Proj_size, r_finite.
-- apply r_dec.
+- apply Automata.proj_size, finite_type, finite_unit.
+- left; now destruct s, t.
 - intros w; rewrite <-ith_i at 3; simpl.
-  unfold A; rewrite Proj_spec; unfold Proj_image; split.
-  + intros [img [H1 H2]]. apply r_spec in H2.
+  unfold A; rewrite Automata.proj_spec; unfold Automata.Image; split.
+  + intros [img [H1 H2]]. apply dfa_zero_spec in H2.
     rewrite map_map_singleton in H1.
     apply Forall2_In_singleton in H1; subst.
     now rewrite vctx_nth, transpose_nth.
   + intros. rewrite vctx_nth in H.
     exists (map (proj ith) w); split.
     * rewrite map_map_singleton. now apply Forall2_In_singleton.
-    * apply r_spec. now rewrite transpose_nth in H.
-Defined.
+    * apply dfa_zero_spec. now rewrite transpose_nth in H.
+Qed.
+
+Lemma regular_R_one i :
+  regular (vec (S i)) (λ w, BinR (ctx w) (R_one i)).
+Proof.
+Admitted.
+
+Lemma regular_R_eq i j :
+  regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_eq i j)).
+Proof.
+Admitted.
+
+Lemma regular_R_le i j :
+  regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_le i j)).
+Proof.
+Admitted.
+
+Lemma regular_R_add i j k :
+  regular (vec (1 + max (max i j) k)) (λ w, BinR (ctx w) (R_add i j k)).
+Proof.
+Admitted.
+
+Corollary regular_r_atom a :
+  Σ n, regular (vec n) (λ w, BinR (ctx w) a).
+Proof.
+destruct a.
+- exists (S i); apply regular_R_zero.
+- exists (S i); apply regular_R_one.
+- exists (1 + max (max i j) k); apply regular_R_add.
+- exists (1 + max i j); apply regular_R_eq.
+- exists (1 + max i j); apply regular_R_le.
+Qed.
 
 End Regular_relations.

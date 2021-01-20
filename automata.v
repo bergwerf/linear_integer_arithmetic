@@ -95,24 +95,26 @@ Arguments Deterministic {_}.
 Arguments Similar {_}.
 Arguments Finite {_}.
 
-Section Results.
+Module Automata.
+
+Section Constructions.
 
 Variable letter : Set.
 
 (* Regular languages are closed under taking intersections. *)
 (* Two automatons are simulated simultaneously. *)
-Section Product_construction.
+Section Product.
 
 Variable A B : automaton letter.
 
 Definition prod_start := (start A, start B).
 Definition prod_accept s := accept A (fst s) && accept B (snd s).
 Definition prod_trans c s := list_prod (trans A c (fst s)) (trans B c (snd s)).
-Definition Prod := Automaton _ _ prod_start prod_accept prod_trans.
+Definition prod := Automaton _ _ prod_start prod_accept prod_trans.
 
-Theorem Prod_Accepts word s t :
+Theorem prod_Accepts word s t :
   Accepts A word s /\ Accepts B word t <->
-  Accepts Prod word (list_prod s t).
+  Accepts prod word (list_prod s t).
 Proof.
 revert s t; induction word as [|c w]; simpl; intros.
 - split.
@@ -141,22 +143,22 @@ revert s t; induction word as [|c w]; simpl; intros.
     now exists sa'. now exists sb'.
 Qed.
 
-Corollary Prod_spec word :
-  Language A word /\ Language B word <-> Language Prod word. 
+Corollary prod_spec word :
+  Language A word /\ Language B word <-> Language prod word. 
 Proof.
-apply Prod_Accepts.
+apply prod_Accepts.
 Qed.
 
-Theorem Prod_det :
-  Deterministic A -> Deterministic B -> Deterministic Prod.
+Theorem prod_det :
+  Deterministic A -> Deterministic B -> Deterministic prod.
 Proof.
 intros H1 H2 c [x y].
 simpl; unfold prod_trans; simpl.
 now rewrite prod_length, H1, H2.
 Qed.
 
-Theorem Prod_size m n :
-  Finite A m -> Finite B n -> Finite Prod (m * n).
+Theorem prod_size m n :
+  Finite A m -> Finite B n -> Finite prod (m * n).
 Proof.
 intros [Qa [Qa_len can_a]] [Qb [Qb_len can_b]];
 exists (list_prod Qa Qb); split.
@@ -166,24 +168,24 @@ destruct (can_a sa) as [sa_can Hsa];
 destruct (can_b sb) as [sb_can Hsb].
 exists (sa_can, sb_can); split. now apply in_prod.
 intros w; simpl; rewrite ?list_prod_single.
-split; intros; apply Prod_Accepts; apply Prod_Accepts in H.
+split; intros; apply prod_Accepts; apply prod_Accepts in H.
 all: split; [apply Hsa|apply Hsb]; easy.
 Qed.
 
-End Product_construction.
+End Product.
 
 (* Automata can be made deterministic. *)
-Section Powerset_construction.
+Section Powerset.
 
 Variable A : automaton letter.
 
 Definition pow_start := [start A].
 Definition pow_accept s := existsb (accept A) s.
 Definition pow_trans c s := [flat_map (trans A c) s].
-Definition Pow := Automaton _ _ pow_start pow_accept pow_trans.
+Definition pow := Automaton _ _ pow_start pow_accept pow_trans.
 
-Theorem Pow_Accepts word ss :
-  Accepts Pow word ss <-> Exists (Accepts A word) ss.
+Theorem pow_Accepts word ss :
+  Accepts pow word ss <-> Exists (Accepts A word) ss.
 Proof.
 revert ss; induction word as [|c w]; simpl; intros.
 - split.
@@ -201,24 +203,24 @@ revert ss; induction word as [|c w]; simpl; intros.
     * easy.
 Qed.
 
-Corollary Pow_spec word :
-  Language Pow word <-> Language A word.
+Corollary pow_spec word :
+  Language pow word <-> Language A word.
 Proof.
 split; intros H.
-- apply Pow_Accepts in H; inv H.
-- apply Pow_Accepts. apply Exists_cons; now left.
+- apply pow_Accepts in H; inv H.
+- apply pow_Accepts. apply Exists_cons; now left.
 Qed.
 
-Theorem Pow_det :
-  Deterministic Pow.
+Theorem pow_det :
+  Deterministic pow.
 Proof.
 easy.
 Qed.
 
 Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
-Theorem Pow_size n :
-  Finite A n -> Finite Pow (2^n).
+Theorem pow_size n :
+  Finite A n -> Finite pow (2^n).
 Proof.
 intros [Q [Q_len Q_can]].
 apply list_powerset with (l:=Q) in dec. 
@@ -232,9 +234,9 @@ destruct (PQ_can ss_can_a) as [ss_can Hss].
   destruct (Q_can t); simpl in *; subst; easy.
 - clear PQ_can. exists ss_can; split. easy.
   intros w; split; intros.
-  all: apply Pow_Accepts, Exists_exists; eexists; split; [apply in_eq|].
-  (* If Pow accepts w, then A accepts w from a single state s. *)
-  all: apply Pow_Accepts, Exists_exists in H as [ss' [R H]]; inv R.
+  all: apply pow_Accepts, Exists_exists; eexists; split; [apply in_eq|].
+  (* If pow accepts w, then A accepts w from a single state s. *)
+  all: apply pow_Accepts, Exists_exists in H as [ss' [R H]]; inv R.
   all: apply Accepts_determine in H as [s [Hs H]].
   + (* Determine A-canonical state for s, and apply similarity to H. *)
     destruct (Q_can s) as [s_can Hcan] eqn:s_can_def. apply Hcan in H.
@@ -246,20 +248,20 @@ destruct (PQ_can ss_can_a) as [ss_can Hss].
     apply Hcan in H. eapply Accepts_subset. apply H. intros r Hr; inv Hr.
 Qed.
 
-End Powerset_construction.
+End Powerset.
 
 (* We can direct missing transitions to a reject state. *)
 Section Explicit_rejection.
 
 Variable A : automaton letter.
 
-Definition Opt_accept s :=
+Definition opt_accept s :=
   match s with
   | None => false
   | Some s' => accept A s'
   end.
 
-Definition Opt_trans c s :=
+Definition opt_trans c s :=
   match s with
   | None => [None]
   | Some s' =>
@@ -269,10 +271,10 @@ Definition Opt_trans c s :=
     else map Some t
   end.
 
-Definition Opt := Automaton _ _ (Some (start A)) Opt_accept Opt_trans.
+Definition opt := Automaton _ _ (Some (start A)) opt_accept opt_trans.
 
-Theorem Opt_Accepts word s :
-  Accepts Opt word s <-> Accepts A word (remove_None s).
+Theorem opt_Accepts word s :
+  Accepts opt word s <-> Accepts A word (remove_None s).
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - (* To avoid needing decidability over (state A), we use induction again. *)
@@ -280,28 +282,28 @@ revert s; induction word as [|c w]; simpl; intros.
   split; intros; b_Prop.
   1,3: now left. 1,2: right; now apply IHs.
 - replace (flat_map (trans A c) (remove_None s))
-  with (remove_None (flat_map (Opt_trans c) s)). apply IHw.
+  with (remove_None (flat_map (opt_trans c) s)). apply IHw.
   induction s as [|[a|] s]; simpl. easy. 2: apply IHs.
   remember (trans A c a) as t; destruct t; simpl. apply IHs.
   now rewrite remove_None_app, remove_None_map_Some, IHs.
 Qed.
 
-Corollary Opt_spec word :
-  Language Opt word <-> Language A word.
+Corollary opt_spec word :
+  Language opt word <-> Language A word.
 Proof.
-intros; apply Opt_Accepts.
+intros; apply opt_Accepts.
 Qed.
 
-Theorem Opt_det :
-  (∀c s, length (trans A c s) <= 1) -> Deterministic Opt.
+Theorem opt_det :
+  (∀c s, length (trans A c s) <= 1) -> Deterministic opt.
 Proof.
 intros H c [s|]; simpl. 2: easy.
 destruct (length (trans A c s) =? 0) eqn:E; simpl; b_Prop.
 easy. assert(Hcs := H c s). rewrite map_length; lia.
 Qed.
 
-Theorem Opt_size n :
-  Finite A n -> Finite Opt (S n).
+Theorem opt_size n :
+  Finite A n -> Finite opt (S n).
 Proof.
 intros [Q [Q_len can]];
 exists (None :: map Some Q); simpl; split.
@@ -309,7 +311,7 @@ now rewrite map_length, Q_len. intros [s|].
 - destruct (can s) as [s_can Hs]; exists (Some s_can); split.
   + apply in_cons. apply in_map_iff; exists s_can; easy.
   + intros w; split; intros.
-    all: apply Opt_Accepts; apply Opt_Accepts in H; simpl in *.
+    all: apply opt_Accepts; apply opt_Accepts in H; simpl in *.
     all: now apply Hs.
 - exists None; split. apply in_eq. easy.
 Qed.
@@ -322,11 +324,11 @@ Section Complementation.
 Variable A : automaton letter.
 Hypothesis det : Deterministic A.
 
-Definition Compl := Automaton _ _
+Definition compl := Automaton _ _
   (start A) (λ s, negb (accept A s)) (trans A).
 
-Theorem Compl_Accepts word s :
-  Accepts Compl word [s] <-> ¬Accepts A word [s].
+Theorem compl_Accepts word s :
+  Accepts compl word [s] <-> ¬Accepts A word [s].
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - now destruct (accept A s).
@@ -334,24 +336,24 @@ revert s; induction word as [|c w]; simpl; intros.
   apply list_singleton in H as [t R]; rewrite R. apply IHw.
 Qed.
 
-Corollary Compl_spec word :
-  Language Compl word <-> ¬Language A word.
+Corollary compl_spec word :
+  Language compl word <-> ¬Language A word.
 Proof.
-intros; apply Compl_Accepts.
+intros; apply compl_Accepts.
 Qed.
 
-Theorem Compl_det :
-  Deterministic Compl.
+Theorem compl_det :
+  Deterministic compl.
 Proof.
 easy.
 Qed.
 
-Theorem Compl_size n :
-  Finite A n -> Finite Compl n.
+Theorem compl_size n :
+  Finite A n -> Finite compl n.
 Proof.
 intros [Q [Q_len can]]; exists Q; split. easy. intros.
 destruct (can s) as [s_can Hcan]; exists s_can. split. easy.
-intros w; split; intros; apply Compl_Accepts; apply Compl_Accepts in H.
+intros w; split; intros; apply compl_Accepts; apply compl_Accepts in H.
 all: intros H'; apply H, Hcan, H'.
 Qed.
 
@@ -362,16 +364,16 @@ Section Projection.
 
 Variable A : automaton letter.
 Variable new_letter : Set.
-Variable proj : new_letter -> list letter.
+Variable f : new_letter -> list letter.
 
-Definition Proj_trans i s := flat_map (λ c, trans A c s) (proj i).
-Definition Proj := Automaton new_letter _ (start A) (accept A) Proj_trans.
+Definition proj_trans i s := flat_map (λ c, trans A c s) (f i).
+Definition proj := Automaton new_letter _ (start A) (accept A) proj_trans.
 
 (* The image of a word in the original automaton A. *)
-Definition Proj_image word image := Forall2 (@In letter) image (map proj word).
+Definition Image word image := Forall2 (@In letter) image (map f word).
 
-Theorem Proj_Accepts word s :
-  Accepts Proj word s <-> ∃image, Proj_image word image /\ Accepts A image s.
+Theorem proj_Accepts word s :
+  Accepts proj word s <-> ∃v, Image word v /\ Accepts A v s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - split.
@@ -394,23 +396,27 @@ revert s; induction word as [|c w]; simpl; intros.
     apply in_flat_map; exists l; easy.
 Qed.
 
-Corollary Proj_spec word :
-  Language Proj word <-> ∃image, Proj_image word image /\ Language A image.
+Corollary proj_spec word :
+  Language proj word <-> ∃v, Image word v /\ Language A v.
 Proof.
-intros; apply Proj_Accepts.
+intros; apply proj_Accepts.
 Qed.
 
-Theorem Proj_size n :
-  Finite A n -> Finite Proj n.
+Theorem proj_size n :
+  Finite A n -> Finite proj n.
 Proof.
 intros [Q [Q_len can]]; exists Q; split. easy. intros.
 destruct (can s) as [s_can Hcan]; exists s_can; split. easy.
-intros w; split; intros; apply Proj_Accepts;
-apply Proj_Accepts in H as [pre H]; exists pre.
+intros w; split; intros; apply proj_Accepts;
+apply proj_Accepts in H as [pre H]; exists pre.
 all: split; [easy|apply Hcan, H].
 Qed.
 
 End Projection.
+
+End Constructions.
+
+End Automata.
 
 (* For any list of states, we can find a word that is accepted by it. *)
 (* The automaton must have a finite number of states. *)
@@ -501,6 +507,7 @@ End Connectivity.
 
 Arguments Path {_}.
 
+Variable letter : Set.
 Variable alphabet : list letter.
 Hypothesis full_alphabet : ∀c, In c alphabet.
 
@@ -576,5 +583,3 @@ apply ex_Accepts_dec.
 Qed.
 
 End Decidability.
-
-End Results.

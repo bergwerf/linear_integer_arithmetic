@@ -155,7 +155,7 @@ Definition NatR (Γ : list nat) (a : r_atom) :=
   match a with
   | R_zero i    => f i = 0
   | R_one i     => f i = 1
-  | R_add i j k => f i = f j + f k
+  | R_add i j k => f i + f j = f k
   | R_eq i j    => f i = f j
   | R_le i j    => f i ≤ f j
   end.
@@ -194,7 +194,7 @@ revert j n; induction x; intros.
 - now exists (R_eq j (n + i)).
 - destruct (IHx1 0 (2 + n)) as [ϕ1 Hϕ1];
   destruct (IHx2 1 (2 + n)) as [ϕ2 Hϕ2].
-  exists ∃[∃[R_add (2 + j) 0 1 ∧` ϕ1 ∧` ϕ2]].
+  exists ∃[∃[R_add 0 1 (2 + j) ∧` ϕ1 ∧` ϕ2]].
   simpl in *; split.
   + intros H. exists (eval Γ (x2<<n)), (eval Γ (x1<<n)).
     repeat split. easy.
