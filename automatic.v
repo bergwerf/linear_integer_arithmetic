@@ -1,74 +1,10 @@
-(* Decision procedures for linear integer arithmetic. *)
+(* Automata automatic structures. *)
 
 Require Vector.
 Require Import Utf8 Nat BinNat List.
 From larith Require Import tactics notations utilities.
-From larith Require Import formulae automata.
+From larith Require Import formulae regular.
 Import ListNotations.
-
-(* Definition of a regular predicate. *)
-Section Regular_predicates.
-
-Section Regular_definition.
-
-Variable letter : Set.
-Variable P : list letter -> Prop.
-
-(* P is regular iff its domain can be decided using a DFA. *)
-Record regular := Regular {
-  r_automaton : automaton letter;
-  r_det       : Deterministic r_automaton;
-  r_size      : nat;
-  r_finite    : Finite r_automaton r_size;
-  r_dec       : ∀s t : state r_automaton, {s = t} + {s ≠ t};
-  r_spec      : ∀w, Language r_automaton w <-> P w;
-}.
-
-(* Regular predicates over a finite alphabet can be decided. *)
-Variable alphabet : list letter.
-Hypothesis full_alphabet : ∀c, In c alphabet.
-Hypothesis is_regular : regular.
-
-Theorem regular_dec :
-  {∃w, P w} + {∀w, ¬P w}.
-Proof.
-destruct is_regular as [A _ n size dec spec].
-eapply dec_replace. apply spec.
-eapply Language_inhabited_dec.
-apply full_alphabet. apply dec. apply size.
-Qed.
-
-End Regular_definition.
-
-(* Replace predicate with an equivalent one. *)
-Theorem regular_ext {letter} P Q :
-  regular letter P -> (∀w, P w <-> Q w) -> regular letter Q.
-Proof.
-intros [A det size fin dec spec] H.
-eapply Regular with (r_automaton:=A).
-apply det. apply fin. apply dec.
-intros; rewrite <-H; apply spec.
-Qed.
-
-(* Change the domain alphabet. *)
-Theorem regular_proj {letter letter'} P Q f :
-  regular letter P -> (∀w, P (map f w) <-> Q w) -> regular letter' Q.
-Proof.
-intros [A det size fin dec spec] H.
-pose(B := Automata.proj _ A _ (λ c, [f c])).
-eapply Regular with (r_automaton:=B).
-- apply Automata.proj_det; easy.
-- apply Automata.proj_size, fin.
-- apply dec.
-- intros. rewrite <-H, <-spec.
-  unfold B; rewrite Automata.proj_spec.
-  unfold Automata.Image; rewrite map_map_singleton. split.
-  + intros [v [H1 H2]]. apply Forall2_In_singleton in H1; congruence.
-  + intros Hfw; exists (map f w); split.
-    now apply Forall2_In_singleton. easy.
-Qed.
-
-End Regular_predicates.
 
 (* Finite-length vectors form a finite alphabet. *)
 Section Finite_vector_alphabet.
@@ -139,19 +75,24 @@ unfold vctx. rewrite Vector_nth_to_list. apply Vector_nth_map.
 Qed.
 
 Hypothesis hypothesis :
-  ∀a, Σ n, regular (vec n) (λ w, Model (vctx w) a).
+  ∀a, Σ n, regular (λ w : list (vec n), Model (vctx w) a).
 
 Theorem wff_regular φ :
-  Σ n, regular (vec n) (λ w, Model |= (φ)[vctx w]).
+  Σ n, regular (λ w : list (vec n), Model |= (φ)[vctx w]).
 Proof.
 induction φ; simpl.
 - (* Atomic formulae: we assume these are regular. *)
   apply hypothesis.
-- (* Conjunction: project on a common alphabet, and use the product. *)
-  admit.
-- (* Negation: apply determinization and use the complement. *)
-  admit.
-- (* Quantification: use tail projection, and find a witness in the image. *)
+- (* Conjunction: project on a common alphabet and use the product. *)
+  destruct IHφ1 as [n1 reg1], IHφ2 as [n2 reg2].
+  exists (max n1 n2); eapply regular_conj.
+  + admit.
+  + admit.
+- (* Negation: flip accept states. *)
+  destruct IHφ as [n reg]; exists n.
+  apply regular_neg, reg.
+- (* Quantification: tail projection. *)
+  destruct IHφ as [n [A det size fin dec spec]].
   admit.
 Abort.
 

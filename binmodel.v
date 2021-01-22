@@ -4,7 +4,7 @@ Require Vector.
 Require Import Utf8 Bool Nat List Lia.
 Require Import PeanoNat BinNat BinPos Nnat.
 From larith Require Import tactics notations utilities.
-From larith Require Import formulae automata automatic.
+From larith Require Import formulae automata regular automatic.
 Import ListNotations.
 
 (* A binary model for the relational language of linear integer arithmetic. *)
@@ -270,7 +270,7 @@ simpl; now rewrite N.add_0_r.
 Qed.
 
 Lemma regular_R_zero i :
-  regular (vec (S i)) (λ w, BinR (ctx w) (R_zero i)).
+  regular (λ w : list (vec (S i)), BinR (ctx w) (R_zero i)).
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_zero); intros.
@@ -284,7 +284,7 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 Qed.
 
 Lemma regular_R_one i :
-  regular (vec (S i)) (λ w, BinR (ctx w) (R_one i)).
+  regular (λ w : list (vec (S i)), BinR (ctx w) (R_one i)).
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_one); intros.
@@ -298,10 +298,10 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 Qed.
 
 Lemma regular_R_eq i j :
-  regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_eq i j)).
+  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (R_eq i j)).
 Proof.
 remember (max i j) as n.
-pose(f (c : vec (S n)) := (proj (fin n i) c, proj (fin n j) c)).
+pose(f (c : vec (S n)) := (vnth (fin n i) c, vnth (fin n j) c)).
 eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_eq); intros.
   simpl; destruct c as [[] []], s; simpl; lia.
@@ -315,10 +315,10 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 Qed.
 
 Lemma regular_R_le i j :
-  regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_le i j)).
+  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (R_le i j)).
 Proof.
 remember (max i j) as n.
-pose(f (c : vec (S n)) := (proj (fin n i) c, proj (fin n j) c)).
+pose(f (c : vec (S n)) := (vnth (fin n i) c, vnth (fin n j) c)).
 eapply regular_proj with (f0:=f).
 eapply Regular with (r_automaton:=dfa_le).
 - easy.
@@ -331,11 +331,11 @@ eapply Regular with (r_automaton:=dfa_le).
 Qed.
 
 Lemma regular_R_add i j k :
-  regular (vec (1 + max (max i j) k)) (λ w, BinR (ctx w) (R_add i j k)).
+  regular (λ w : list (vec (1 + max (max i j) k)), BinR (ctx w) (R_add i j k)).
 Proof.
 remember (max (max i j) k) as n.
 pose(f (c : vec (S n)) :=
-  ((proj (fin n i) c, proj (fin n j) c), proj (fin n k) c)).
+  ((vnth (fin n i) c, vnth (fin n j) c), vnth (fin n k) c)).
 eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_add); intros.
   simpl; destruct c as [[[] []] []], s; simpl; lia.
@@ -349,7 +349,7 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 Qed.
 
 Corollary regular_r_atom a :
-  Σ n, regular (vec n) (λ w, BinR (ctx w) a).
+  Σ n, regular (λ w : list (vec n), BinR (ctx w) a).
 Proof.
 destruct a.
 - exists (S i); apply regular_R_zero.

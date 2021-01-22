@@ -6,5 +6,6 @@ utilities.v
 
 formulae.v
 automata.v
-binmodel.v
+regular.v
 automatic.v
+binmodel.v

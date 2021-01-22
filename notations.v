@@ -14,7 +14,7 @@ Notation "A × B" := (prod A B) (at level 100).
 Notation vec := (Vector.t bool).
 Notation vnil := (Vector.nil _).
 Notation vcons := (Vector.cons _).
-Notation proj n := (λ v, Vector.nth v n).
+Notation vnth n := (λ v, Vector.nth v n).
 
 Notation "⟨ ⟩" := (vnil) (format "⟨ ⟩").
 Notation "h ;; t" := (vcons h _ t)
