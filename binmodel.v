@@ -8,14 +8,14 @@ From larith Require Import formulae automata regular automatic.
 Import ListNotations.
 
 (* A binary model for the relational language of linear integer arithmetic. *)
-Definition BinR (Γ : list N) (a : r_atom) :=
+Definition BinR (Γ : list N) (a : rel_atom) :=
   (let f := λ i, nth i Γ 0 in
   match a with
-  | R_zero i    => f i = 0
-  | R_one i     => f i = 1
-  | R_add i j k => f i + f j = f k
-  | R_eq i j    => f i = f j
-  | R_le i j    => f i <= f j
+  | rel_zero i    => f i = 0
+  | rel_one i     => f i = 1
+  | rel_add i j k => f i + f j = f k
+  | rel_eq i j    => f i = f j
+  | rel_le i j    => f i <= f j
   end)%N.
 
 Theorem NatR_iff_BinR φ Γ :
@@ -269,8 +269,8 @@ unfold Language; rewrite dfa_add_Accepts.
 simpl; now rewrite N.add_0_r.
 Qed.
 
-Lemma regular_R_zero i :
-  regular (λ w : list (vec (S i)), BinR (ctx w) (R_zero i)).
+Lemma regular_rel_zero i :
+  regular (λ w : list (vec (S i)), BinR (ctx w) (rel_zero i)).
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_zero); intros.
@@ -283,8 +283,8 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
   rewrite vctx_nth, transpose_nth; reflexivity. easy.
 Qed.
 
-Lemma regular_R_one i :
-  regular (λ w : list (vec (S i)), BinR (ctx w) (R_one i)).
+Lemma regular_rel_one i :
+  regular (λ w : list (vec (S i)), BinR (ctx w) (rel_one i)).
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_one); intros.
@@ -297,8 +297,8 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
   rewrite vctx_nth, transpose_nth; reflexivity. easy.
 Qed.
 
-Lemma regular_R_eq i j :
-  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (R_eq i j)).
+Lemma regular_rel_eq i j :
+  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (rel_eq i j)).
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth (fin n i) c, vnth (fin n j) c)).
@@ -314,8 +314,8 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
   rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
-Lemma regular_R_le i j :
-  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (R_le i j)).
+Lemma regular_rel_le i j :
+  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (rel_le i j)).
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth (fin n i) c, vnth (fin n j) c)).
@@ -330,8 +330,8 @@ eapply Regular with (r_automaton:=dfa_le).
   rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
-Lemma regular_R_add i j k :
-  regular (λ w : list (vec (1 + max (max i j) k)), BinR (ctx w) (R_add i j k)).
+Lemma regular_rel_add i j k :
+  regular (λ w : list (vec (1 + max (max i j) k)), BinR (ctx w) (rel_add i j k)).
 Proof.
 remember (max (max i j) k) as n.
 pose(f (c : vec (S n)) :=
@@ -352,11 +352,11 @@ Corollary regular_r_atom a :
   Σ n, regular (λ w : list (vec n), BinR (ctx w) a).
 Proof.
 destruct a.
-- exists (S i); apply regular_R_zero.
-- exists (S i); apply regular_R_one.
-- exists (1 + max (max i j) k); apply regular_R_add.
-- exists (1 + max i j); apply regular_R_eq.
-- exists (1 + max i j); apply regular_R_le.
+- exists (S i); apply regular_rel_zero.
+- exists (S i); apply regular_rel_one.
+- exists (1 + max (max i j) k); apply regular_rel_add.
+- exists (1 + max i j); apply regular_rel_eq.
+- exists (1 + max i j); apply regular_rel_le.
 Qed.
 
 End Regular_relations.

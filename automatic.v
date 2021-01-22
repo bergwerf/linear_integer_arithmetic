@@ -71,30 +71,33 @@ Definition vctx {n} (w : list (vec n)) : list domain :=
 Lemma vctx_nth {n} (w : list (vec n)) i d :
   nth (findex i) (vctx w) d = value (Vector.nth (transpose w) i).
 Proof.
-unfold vctx. rewrite Vector_nth_to_list. apply Vector_nth_map.
+unfold vctx. rewrite <-Vector_nth_to_list. apply Vector_nth_map.
 Qed.
 
-Hypothesis hypothesis :
-  ∀a, Σ n, regular (λ w : list (vec n), Model (vctx w) a).
+Definition Regular_wff φ := Σ n, Use Model φ n ×
+  regular (λ w : list (vec n), Model |= (φ)[vctx w]).
 
-Theorem wff_regular φ :
-  Σ n, regular (λ w : list (vec n), Model |= (φ)[vctx w]).
+Hypothesis hypothesis : ∀a, Regular_wff (wff_atom _ a).
+
+Theorem regular_wff φ :
+  Regular_wff φ.
 Proof.
 induction φ; simpl.
 - (* Atomic formulae: we assume these are regular. *)
   apply hypothesis.
+- (* Negation: flip accept states. *)
+  destruct IHφ as [n [use reg]]; exists n; split.
+  + split; simpl; apply contra, use.
+  + simpl; apply regular_neg, reg.
 - (* Conjunction: project on a common alphabet and use the product. *)
-  destruct IHφ1 as [n1 reg1], IHφ2 as [n2 reg2].
-  exists (max n1 n2); eapply regular_conj.
+  destruct IHφ1 as [n1 [use1 reg1]], IHφ2 as [n2 [use2 reg2]].
+  exists (max n1 n2); split; simpl. 2: eapply regular_conj.
+  + admit.
   + eapply regular_proj with (f:=Vector.take n1 (le_max_l n1 n2)).
     apply reg1. intros; simpl. admit.
   + eapply regular_proj with (f:=Vector.take n2 (le_max_r n1 n2)).
     apply reg2. intros; simpl. admit.
-- (* Negation: flip accept states. *)
-  destruct IHφ as [n reg]; exists n.
-  apply regular_neg, reg.
 - (* Quantification: tail projection. *)
-  destruct IHφ as [n [A det size fin dec spec]].
   admit.
 Abort.
 

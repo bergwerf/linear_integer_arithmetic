@@ -16,34 +16,33 @@ Variable atom : Type.
 
 (* Basic formula structure. *)
 Inductive wff :=
-  | WffAtom (a : atom)
-  | WffAnd (φ ϕ : wff)
-  | WffNot (φ : wff)
-  | WffEx (φ : wff).
+  | wff_atom (a : atom)
+  | wff_not (φ : wff)
+  | wff_and (φ ϕ : wff)
+  | wff_ex (φ : wff).
 
 Variable domain : Type.
 Variable Model : list domain -> atom -> Prop.
 
 Fixpoint Realizes (Γ : list domain) (f : wff) :=
   match f with
-  | WffAtom a  => Model Γ a
-  | WffAnd φ ϕ => Realizes Γ φ /\ Realizes Γ ϕ
-  | WffNot φ   => ¬Realizes Γ φ
-  | WffEx φ    => ∃x, Realizes (x :: Γ) φ
+  | wff_atom a  => Model Γ a
+  | wff_not φ   => ¬Realizes Γ φ
+  | wff_and φ ϕ => Realizes Γ φ /\ Realizes Γ ϕ
+  | wff_ex φ    => ∃x, Realizes (x :: Γ) φ
   end.
+
+Definition Use φ n := ∀Γ, Realizes Γ φ <-> Realizes (firstn n Γ) φ.
 
 End First_order_formulae.
 
-Arguments WffAtom {_}.
-Arguments WffAnd {_}.
-Arguments WffNot {_}.
-Arguments WffEx {_}.
 Arguments Realizes {_ _}.
+Arguments Use {_ _}.
 
 Notation model atom domain := (list domain -> atom -> Prop).
-Notation "¬` φ" := (WffNot φ) (at level 30, right associativity, format "¬` φ").
-Notation "φ ∧` ϕ" := (WffAnd φ ϕ) (right associativity, at level 35).
-Notation "∃[ φ ]" := (WffEx φ) (format "∃[ φ ]").
+Notation "¬` φ" := (wff_not _ φ) (at level 30, right associativity, format "¬` φ").
+Notation "φ ∧` ϕ" := (wff_and _ φ ϕ) (right associativity, at level 35).
+Notation "∃[ φ ]" := (wff_ex _ φ) (format "∃[ φ ]").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
   (at level 20, format "A  |=  ( φ )[ Γ ]").
 
@@ -88,9 +87,9 @@ Theorem similar_models :
 Proof.
 intros eqv; induction φ; simpl; intros.
 - apply eqv.
+- split; apply contra, IHφ.
 - split; intros H.
   all: split; [apply IHφ1|apply IHφ2]; apply H.
-- split; apply contra, IHφ.
 - split.
   + intros [x Hx]; exists (f x).
     rewrite <-map_cons; apply IHφ, Hx.
@@ -103,77 +102,77 @@ End Same_atoms.
 End Lemmas_about_realization.
 
 (* Atomic formulae for languages that we will be using. *)
-Section Atomic_formulae_for_linear_integer_arithmetic.
+Section Atomic_formulae_for_linear_arithmetic.
 
-Inductive std_term :=
-  | Zero
-  | One
-  | Var (i : nat)
-  | Add (x y : std_term).
+Inductive la_term :=
+  | la_zero
+  | la_one
+  | la_var (i : nat)
+  | la_add (x y : la_term).
 
-Inductive std_atom :=
-  | Std_eq (x y : std_term)
-  | Std_le (x y : std_term).
+Inductive la_atom :=
+  | la_eq (x y : la_term)
+  | la_le (x y : la_term).
 
-Inductive r_atom :=
-  | R_zero (i : nat)
-  | R_one (i : nat)
-  | R_add (i j k : nat)
-  | R_eq (i j : nat)
-  | R_le (i j : nat).
+Inductive rel_atom :=
+  | rel_zero (i : nat)
+  | rel_one (i : nat)
+  | rel_add (i j k : nat)
+  | rel_eq (i j : nat)
+  | rel_le (i j : nat).
 
-End Atomic_formulae_for_linear_integer_arithmetic.
+End Atomic_formulae_for_linear_arithmetic.
 
-Notation formula := (wff std_atom).
-Notation rformula := (wff r_atom).
+Notation formula := (wff la_atom).
+Notation rformula := (wff rel_atom).
 
-Definition formula_atom := @WffAtom std_atom.
-Definition rformula_atom := @WffAtom r_atom.
+Definition formula_atom := wff_atom la_atom.
+Definition rformula_atom := wff_atom rel_atom.
 
-Coercion formula_atom : std_atom >-> formula.
-Coercion rformula_atom : r_atom >-> rformula.
+Coercion formula_atom : la_atom >-> formula.
+Coercion rformula_atom : rel_atom >-> rformula.
 
-(* Standard models of linear integer arithmetic. *)
-Section Standard_models_of_linear_integer_arithmetic.
+(* Standard models of linear arithmetic. *)
+Section Standard_models_of_linear_arithmetic.
 
-Fixpoint eval (Γ : list nat) (x : std_term) :=
+Fixpoint eval (Γ : list nat) (x : la_term) :=
   match x with
-  | Zero    => 0
-  | One     => 1
-  | Var i   => nth i Γ 0
-  | Add x y => eval Γ x + eval Γ y
+  | la_zero    => 0
+  | la_one     => 1
+  | la_var i   => nth i Γ 0
+  | la_add x y => eval Γ x + eval Γ y
   end.
 
-Definition Nat (Γ : list nat) (a : std_atom) :=
+Definition Nat (Γ : list nat) (a : la_atom) :=
   match a with
-  | Std_eq x y => eval Γ x = eval Γ y
-  | Std_le x y => eval Γ x ≤ eval Γ y
+  | la_eq x y => eval Γ x = eval Γ y
+  | la_le x y => eval Γ x ≤ eval Γ y
   end.
 
-Definition NatR (Γ : list nat) (a : r_atom) :=
+Definition NatR (Γ : list nat) (a : rel_atom) :=
   let f := λ i, nth i Γ 0 in
   match a with
-  | R_zero i    => f i = 0
-  | R_one i     => f i = 1
-  | R_add i j k => f i + f j = f k
-  | R_eq i j    => f i = f j
-  | R_le i j    => f i ≤ f j
+  | rel_zero i    => f i = 0
+  | rel_one i     => f i = 1
+  | rel_add i j k => f i + f j = f k
+  | rel_eq i j    => f i = f j
+  | rel_le i j    => f i ≤ f j
   end.
 
-End Standard_models_of_linear_integer_arithmetic.
+End Standard_models_of_linear_arithmetic.
 
 (* Embedding formula in rformula. *)
 Section Embedding_of_formula_in_rformula.
 
 Fixpoint shift_vars n x :=
   match x with
-  | Zero    => Zero
-  | One     => One
-  | Var i   => Var (n + i)
-  | Add x y => Add (shift_vars n x) (shift_vars n y)
+  | la_zero    => la_zero
+  | la_one     => la_one
+  | la_var i   => la_var (n + i)
+  | la_add x y => la_add (shift_vars n x) (shift_vars n y)
   end.
 
-Notation "# i" := (Var i) (at level 9, format "# i").
+Notation "# i" := (la_var i) (at level 9, format "# i").
 Notation "x << n" := (shift_vars n x) (at level 10, format "x << n").
 
 Theorem eval_shift_vars x Γ n :
@@ -185,16 +184,16 @@ induction x; simpl. 1,2: easy.
 - now rewrite IHx1, IHx2.
 Qed.
 
-Lemma reduce_std_term j x n :
-  Σ ϕ, ∀Γ, Nat |= (Std_eq #j (x<<n))[Γ] <-> NatR |= (ϕ)[Γ].
+Lemma reduce_la_term j x n :
+  Σ ϕ, ∀Γ, Nat |= (la_eq #j (x<<n))[Γ] <-> NatR |= (ϕ)[Γ].
 Proof.
 revert j n; induction x; intros.
-- now exists (R_zero j).
-- now exists (R_one j).
-- now exists (R_eq j (n + i)).
+- now exists (rel_zero j).
+- now exists (rel_one j).
+- now exists (rel_eq j (n + i)).
 - destruct (IHx1 0 (2 + n)) as [ϕ1 Hϕ1];
   destruct (IHx2 1 (2 + n)) as [ϕ2 Hϕ2].
-  exists ∃[∃[R_add 0 1 (2 + j) ∧` ϕ1 ∧` ϕ2]].
+  exists ∃[∃[rel_add 0 1 (2 + j) ∧` ϕ1 ∧` ϕ2]].
   simpl in *; split.
   + intros H. exists (eval Γ (x2<<n)), (eval Γ (x1<<n)).
     repeat split. easy.
@@ -206,9 +205,9 @@ revert j n; induction x; intros.
     rewrite ?eval_shift_vars; congruence.
 Qed.
 
-Lemma reduce_std_eq x y Γ :
-  Nat |= (Std_eq x y)[Γ] <-> 
-  Nat |= (∃[Std_eq #0 (x<<1) ∧` Std_eq #0 (y<<1)])[Γ].
+Lemma reduce_la_eq x y Γ :
+  Nat |= (la_eq x y)[Γ] <-> 
+  Nat |= (∃[la_eq #0 (x<<1) ∧` la_eq #0 (y<<1)])[Γ].
 Proof.
 split; simpl.
 - intros H. exists (eval Γ x).
@@ -219,9 +218,9 @@ split; simpl.
   simpl in *; congruence.
 Qed.
 
-Lemma reduce_std_le x y Γ :
-  Nat |= (Std_le x y)[Γ] <-> 
-  Nat |= (∃[∃[Std_le #0 #1 ∧` Std_eq #0 (x<<2) ∧` Std_eq #1 (y<<2)]])[Γ].
+Lemma reduce_la_le x y Γ :
+  Nat |= (la_le x y)[Γ] <-> 
+  Nat |= (∃[∃[la_le #0 #1 ∧` la_eq #0 (x<<2) ∧` la_eq #1 (y<<2)]])[Γ].
 Proof.
 split; simpl.
 - intros H; exists (eval Γ y), (eval Γ x); repeat split.
@@ -232,39 +231,39 @@ split; simpl.
   simpl in *; congruence.
 Qed.
 
-Lemma std_le_iff_r_le i j Γ :
-  Nat |= (Std_le #i #j)[Γ] <-> NatR |= (R_le i j)[Γ].
+Lemma la_le_iff_rel_le i j Γ :
+  Nat |= (la_le #i #j)[Γ] <-> NatR |= (rel_le i j)[Γ].
 Proof.
 easy.
 Qed.
 
-Theorem convert_std_atom_to_rformula (a : std_atom) :
+Theorem convert_la_atom_to_rformula (a : la_atom) :
   Σ ϕ, ∀Γ, NatR |= (ϕ)[Γ] <-> Nat |= (a)[Γ].
 Proof.
 destruct a.
 - (* Equality relation. *)
-  destruct reduce_std_term with (j:=0)(x:=x)(n:=1) as [ϕx Hx];
-  destruct reduce_std_term with (j:=0)(x:=y)(n:=1) as [ϕy Hy].
-  eexists; symmetry; etransitivity. apply reduce_std_eq.
+  destruct reduce_la_term with (j:=0)(x:=x)(n:=1) as [ϕx Hx];
+  destruct reduce_la_term with (j:=0)(x:=y)(n:=1) as [ϕy Hy].
+  eexists; symmetry; etransitivity. apply reduce_la_eq.
   apply realizes_ex, realizes_and; easy.
 - (* Less or equal relation. *)
-  destruct reduce_std_term with (j:=0)(x:=x)(n:=2) as [ϕx Hx].
-  destruct reduce_std_term with (j:=1)(x:=y)(n:=2) as [ϕy Hy].
-  eexists; symmetry; etransitivity. apply reduce_std_le.
+  destruct reduce_la_term with (j:=0)(x:=x)(n:=2) as [ϕx Hx].
+  destruct reduce_la_term with (j:=1)(x:=y)(n:=2) as [ϕy Hy].
+  eexists; symmetry; etransitivity. apply reduce_la_le.
   apply realizes_ex, realizes_ex, realizes_and.
-  apply std_le_iff_r_le. apply realizes_and; easy.
+  apply la_le_iff_rel_le. apply realizes_and; easy.
 Qed.
 
 Corollary convert_formula_to_rformula φ :
   Σ ϕ, ∀Γ, NatR |= (ϕ)[Γ] <-> Nat |= (φ)[Γ].
 Proof.
 induction φ.
-- apply convert_std_atom_to_rformula.
+- apply convert_la_atom_to_rformula.
+- destruct IHφ as [ϕ H].
+  exists (¬`ϕ); split; apply contra, H.
 - destruct IHφ1 as [ϕ1 H1], IHφ2 as [ϕ2 H2].
   exists (ϕ1 ∧` ϕ2); split.
   all: split; [apply H1|apply H2]; apply H.
-- destruct IHφ as [ϕ H].
-  exists (¬`ϕ); split; apply contra, H.
 - destruct IHφ as [ϕ H].
   exists ∃[ϕ]; split;
   intros [x Hx]; exists x; apply H, Hx.

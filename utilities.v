@@ -337,7 +337,7 @@ rewrite IHn. easy. lia.
 Qed.
 
 Theorem Vector_nth_to_list {n} (v : Vector.t T n) (i : Fin.t n) d :
-  nth (findex i) (Vector.to_list v) d = Vector.nth v i.
+  Vector.nth v i = nth (findex i) (Vector.to_list v) d.
 Proof.
 induction v. easy.
 now apply Fin.caseS' with (p:=i).
