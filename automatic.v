@@ -1,10 +1,10 @@
 (* Automata automatic structures. *)
 
 Require Vector.
-Require Import Utf8 Nat BinNat List.
+Require Import Utf8 PeanoNat BinNat List.
 From larith Require Import tactics notations utilities.
 From larith Require Import formulae regular.
-Import ListNotations.
+Import Nat ListNotations.
 
 (* Finite-length vectors form a finite alphabet. *)
 Section Finite_vector_alphabet.
@@ -86,8 +86,10 @@ induction φ; simpl.
 - (* Conjunction: project on a common alphabet and use the product. *)
   destruct IHφ1 as [n1 reg1], IHφ2 as [n2 reg2].
   exists (max n1 n2); eapply regular_conj.
-  + admit.
-  + admit.
+  + eapply regular_proj with (f:=Vector.take n1 (le_max_l n1 n2)).
+    apply reg1. intros; simpl. admit.
+  + eapply regular_proj with (f:=Vector.take n2 (le_max_r n1 n2)).
+    apply reg2. intros; simpl. admit.
 - (* Negation: flip accept states. *)
   destruct IHφ as [n reg]; exists n.
   apply regular_neg, reg.

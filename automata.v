@@ -250,8 +250,8 @@ Qed.
 
 End Powerset.
 
-(* We can direct missing transitions to a reject state. *)
-Section Explicit_rejection.
+(* Add a default rejection state None. *)
+Section Option.
 
 Variable A : automaton letter.
 
@@ -316,7 +316,7 @@ now rewrite map_length, Q_len. intros [s|].
 - exists None; split. apply in_eq. easy.
 Qed.
 
-End Explicit_rejection.
+End Option.
 
 (* Regular languages are closed under complementation. *)
 Section Complementation.

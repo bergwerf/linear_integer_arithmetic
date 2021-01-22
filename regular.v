@@ -76,15 +76,25 @@ Variable P Q : list letter -> Prop.
 Theorem regular_conj :
   regular P -> regular Q -> regular (λ w, P w /\ Q w).
 Proof.
-Admitted.
+intros [A detA sizeA finA decA specA] [B detB sizeB finB decB specB].
+eapply Regular with (r_automaton:=Automata.prod _ A B).
+- now apply Automata.prod_det.
+- apply Automata.prod_size. apply finA. apply finB.
+- intros [s s'] [t t']. destruct (decA s t), (decB s' t'); subst.
+  now left. all: right; intros H; inv H.
+- intros. now rewrite <-Automata.prod_spec, specA, specB.
+Qed.
 
 Theorem regular_neg :
   regular P -> regular (λ w, ¬P w).
 Proof.
 intros [A det size fin dec spec].
 eapply Regular with (r_automaton:=Automata.compl _ A).
-apply Automata.compl_det, det. now apply Automata.compl_size, fin. apply dec.
-intros. rewrite Automata.compl_spec. split; apply contra, spec. easy.
+- apply Automata.compl_det, det.
+- now apply Automata.compl_size, fin.
+- apply dec.
+- intros. rewrite Automata.compl_spec.
+  split; apply contra, spec. easy.
 Qed.
 
 End Regular_operations.
