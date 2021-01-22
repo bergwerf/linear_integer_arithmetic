@@ -14,44 +14,44 @@ Section Propositions.
 
 Variable P Q : Prop.
 
-Lemma triple_not :
+Theorem triple_not :
   ¬¬¬P -> ¬P.
 Proof.
 auto.
 Qed.
 
-Lemma weaken :
+Theorem weaken :
   P -> ¬¬P.
 Proof.
 auto.
 Qed.
 
-Lemma contra :
+Theorem contra :
   (P -> Q) -> (¬Q -> ¬P).
 Proof.
 auto.
 Qed.
 
-Lemma not_or_and :
+Theorem not_or_and :
   ¬(P \/ Q) <-> ¬P /\ ¬Q.
 Proof.
 split; auto. now intros [H1 H2] [H|H].
 Qed.
 
-Lemma and_remove_r :
+Theorem and_remove_r :
   Q -> P /\ Q <-> P.
 Proof.
 easy.
 Qed.
 
-Lemma or_remove_r :
+Theorem or_remove_r :
   ¬Q -> P \/ Q <-> P.
 Proof.
 intros nQ; split; intros.
 now destruct H. now left.
 Qed.
 
-Lemma exfalso_iff :
+Theorem exfalso_iff :
   ¬P -> ¬Q -> P <-> Q.
 Proof.
 easy.
@@ -60,13 +60,13 @@ Qed.
 Variable P_dec : {P} + {¬P}.
 Variable Q_dec : {Q} + {¬Q}.
 
-Lemma not_dec :
+Theorem not_dec :
   {¬P} + {¬¬P}.
 Proof.
 destruct P_dec; auto.
 Qed.
 
-Lemma and_dec :
+Theorem and_dec :
   {P /\ Q} + {¬(P /\ Q)}.
 Proof.
 destruct P_dec, Q_dec.
@@ -80,7 +80,7 @@ Section Predicates.
 Variable X : Type.
 Variable P Q : X -> Prop.
 
-Lemma dec_replace :
+Theorem dec_replace :
   (∀x, P x <-> Q x) ->
   {∃x, P x} + {∀x, ¬P x} ->
   {∃x, Q x} + {∀x, ¬Q x}.
@@ -95,36 +95,36 @@ End Predicates.
 End Laws_of_logic.
 
 (******************************************************************************)
-(* II. Various list utilities.                                               *)
+(* II. Various list utilities.                                                *)
 (******************************************************************************)
-Section Lemmas_about_lists.
+Section Theorems_about_lists.
 
-Lemma list_prod_nil_r {X Y} (l : list X) :
+Theorem list_prod_nil_r {X Y} (l : list X) :
   @list_prod X Y l nil = nil.
 Proof.
 now induction l.
 Qed.
 
-Lemma list_prod_single {X Y} (x : X) (y : Y) :
+Theorem list_prod_single {X Y} (x : X) (y : Y) :
   [(x, y)] = list_prod [x] [y].
 Proof.
 easy.
 Qed.
 
-Lemma list_singleton {X} (l : list X) :
+Theorem list_singleton {X} (l : list X) :
   length l = 1 -> ∃x, l = [x].
 Proof.
 intros. destruct l. easy. destruct l.
 now exists x. easy.
 Qed.
 
-Lemma map_map_singleton {X Y} (f : X -> Y) xs :
+Theorem map_map_singleton {X Y} (f : X -> Y) xs :
   map (λ x, [f x]) xs = map (λ y, [y]) (map f xs).
 Proof.
 now rewrite map_map.
 Qed.
 
-Lemma Forall2_In_singleton {X} (l l' : list X) :
+Theorem Forall2_In_singleton {X} (l l' : list X) :
   Forall2 (@In _) l (map (λ x, [x]) l') <-> l = l'.
 Proof.
 revert l'; induction l, l'; simpl; try easy. split; intros.
@@ -265,14 +265,14 @@ Fixpoint remove_None (l : list (option X)) :=
   | Some x :: l' => x :: remove_None l'
   end.
 
-Lemma remove_None_map_Some l :
+Theorem remove_None_map_Some l :
   remove_None (map Some l) = l.
 Proof.
 induction l; simpl.
 easy. now rewrite IHl.
 Qed.
 
-Lemma remove_None_app l l' :
+Theorem remove_None_app l l' :
   remove_None (l ++ l') = remove_None l ++ remove_None l'.
 Proof.
 induction l as [|[x|] l]; simpl. easy.
@@ -286,7 +286,7 @@ Section Nth_element_of_a_mapped_list.
 Variable X Y : Type.
 Variable f : X -> Y.
 
-Lemma nth_map i Γ d x :
+Theorem nth_map i Γ d x :
   nth i Γ d = x -> nth i (map f Γ) (f d) = f x.
 Proof.
 revert i; induction Γ; destruct i; simpl.
@@ -295,7 +295,7 @@ Qed.
 
 Hypothesis f_inj : ∀x x', f x = f x' -> x = x'.
 
-Lemma nth_map_inj i Γ d x :
+Theorem nth_map_inj i Γ d x :
   nth i (map f Γ) (f d) = f x -> nth i Γ d = x.
 Proof.
 revert i; induction Γ; destruct i; simpl.
@@ -304,42 +304,53 @@ Qed.
 
 End Nth_element_of_a_mapped_list.
 
-End Lemmas_about_lists.
+End Theorems_about_lists.
 
-Section Lemmas_about_vectors.
+(******************************************************************************)
+(* III. Various vector utilities.                                             *)
+(******************************************************************************)
+Section Theorems_about_vectors.
 
 Variable T : Type.
 
-Lemma fin n i :
-  i < n -> Σ ith : Fin.t n, findex ith = i.
+Fixpoint fin n i : Fin.t (S n) :=
+  match n with
+  | 0   => Fin.F1
+  | S m =>
+    match i with
+    | 0   => Fin.F1
+    | S j => Fin.FS (fin m j)
+    end
+  end.
+
+Fixpoint findex {n} (i : Fin.t n) :=
+  match i with
+  | Fin.F1 => 0
+  | Fin.FS j => S (findex j)
+  end.
+
+Theorem fin_spec n i :
+  i <= n -> findex (fin n i) = i.
 Proof.
-intros ith. exists (Fin.of_nat_lt ith).
-now rewrite Fin.to_nat_of_nat.
+revert i; induction n, i; simpl; intros; try easy.
+rewrite IHn. easy. lia.
 Qed.
 
-Lemma findex_S {n} (i : Fin.t n) :
-  findex (Fin.FS i) = S (findex i).
-Proof.
-simpl; destruct (Fin.to_nat i).
-simpl; easy.
-Qed.
-
-Lemma Vector_nth_to_list {n} (v : Vector.t T n) (i : Fin.t n) d :
+Theorem Vector_nth_to_list {n} (v : Vector.t T n) (i : Fin.t n) d :
   nth (findex i) (Vector.to_list v) d = Vector.nth v i.
 Proof.
 induction v. easy.
-eapply Fin.caseS' with (p:=i). easy.
-intros j. rewrite findex_S. apply IHv.
+now apply Fin.caseS' with (p:=i).
 Qed.
 
-Lemma Vector_nth_map {n T'} (f : T -> T') (v : Vector.t T n) (i : Fin.t n) :
+Theorem Vector_nth_map {n T'} (f : T -> T') (v : Vector.t T n) (i : Fin.t n) :
   Vector.nth (Vector.map f v) i = f (Vector.nth v i).
 Proof.
 induction v. easy.
 now apply Fin.caseS' with (p:=i).
 Qed.
 
-Lemma Vector_nth_map2_cons {n} (hs : Vector.t T n) ts i :
+Theorem Vector_nth_map2_cons {n} (hs : Vector.t T n) ts i :
   Vector.nth (Vector.map2 cons hs ts) i =
   Vector.nth hs i :: Vector.nth ts i.
 Proof.
@@ -349,7 +360,7 @@ simpl Vector.map2. eapply Fin.caseS' with (p:=i); simpl.
 easy. apply IHts.
 Qed.
 
-End Lemmas_about_vectors.
+End Theorems_about_vectors.
 
 Arguments list_isect {_}.
 Arguments list_subt {_}.

@@ -272,7 +272,6 @@ Qed.
 Lemma regular_R_zero i :
   regular (vec (S i)) (λ w, BinR (ctx w) (R_zero i)).
 Proof.
-destruct fin with (n:=S i)(i:=i) as [ith ith_i]. auto.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_zero); intros.
   simpl; destruct c; simpl; lia.
@@ -280,14 +279,13 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply option_unit_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_zero_spec.
-- intros; simpl. rewrite <-ith_i at 2.
-  rewrite vctx_nth, transpose_nth. reflexivity.
+- intros; simpl. erewrite <-(fin_spec i i) at 2.
+  rewrite vctx_nth, transpose_nth; reflexivity. easy.
 Qed.
 
 Lemma regular_R_one i :
   regular (vec (S i)) (λ w, BinR (ctx w) (R_one i)).
 Proof.
-destruct fin with (n:=S i)(i:=i) as [ith ith_i]. auto.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_one); intros.
   simpl; destruct c, s; simpl; lia.
@@ -295,17 +293,15 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply option_bool_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_one_spec.
-- intros; simpl. rewrite <-ith_i at 2.
-  rewrite vctx_nth, transpose_nth. reflexivity.
+- intros; simpl. rewrite <-(fin_spec i i) at 2.
+  rewrite vctx_nth, transpose_nth; reflexivity. easy.
 Qed.
 
 Lemma regular_R_eq i j :
   regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_eq i j)).
 Proof.
-remember (1 + max i j) as n.
-destruct fin with (n:=n)(i:=i) as [ith ith_i]. lia.
-destruct fin with (n:=n)(i:=j) as [jth jth_j]. lia.
-pose(f (c : vec n) := (proj ith c, proj jth c)).
+remember (max i j) as n.
+pose(f (c : vec (S n)) := (proj (fin n i) c, proj (fin n j) c)).
 eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_eq); intros.
   simpl; destruct c as [[] []], s; simpl; lia.
@@ -313,35 +309,33 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply option_unit_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_eq_spec.
-- intros; simpl. rewrite <-ith_i, <-jth_j.
-  rewrite ?vctx_nth, ?transpose_nth. now rewrite ?map_map.
+- intros; simpl.
+  rewrite <-(fin_spec n i), <-(fin_spec n j).
+  rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
 Lemma regular_R_le i j :
   regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_le i j)).
 Proof.
-remember (1 + max i j) as n.
-destruct fin with (n:=n)(i:=i) as [ith ith_i]. lia.
-destruct fin with (n:=n)(i:=j) as [jth jth_j]. lia.
-pose(f (c : vec n) := (proj ith c, proj jth c)).
+remember (max i j) as n.
+pose(f (c : vec (S n)) := (proj (fin n i) c, proj (fin n j) c)).
 eapply regular_proj with (f0:=f).
 eapply Regular with (r_automaton:=dfa_le).
 - easy.
 - apply finite_type, finite_bool.
 - apply bool_dec.
 - apply dfa_le_spec.
-- intros; simpl. rewrite <-ith_i, <-jth_j.
-  rewrite ?vctx_nth, ?transpose_nth. now rewrite ?map_map.
+- intros; simpl.
+  rewrite <-(fin_spec n i), <-(fin_spec n j).
+  rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
 Lemma regular_R_add i j k :
   regular (vec (1 + max (max i j) k)) (λ w, BinR (ctx w) (R_add i j k)).
 Proof.
-remember (1 + max (max i j) k) as n.
-destruct fin with (n:=n)(i:=i) as [ith ith_i]. lia.
-destruct fin with (n:=n)(i:=j) as [jth jth_j]. lia.
-destruct fin with (n:=n)(i:=k) as [kth kth_k]. lia.
-pose(f (c : vec n) := ((proj ith c, proj jth c), proj kth c)).
+remember (max (max i j) k) as n.
+pose(f (c : vec (S n)) :=
+  ((proj (fin n i) c, proj (fin n j) c), proj (fin n k) c)).
 eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_add); intros.
   simpl; destruct c as [[[] []] []], s; simpl; lia.
@@ -349,8 +343,9 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply option_bool_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_add_spec.
-- intros; simpl. rewrite <-ith_i, <-jth_j, <-kth_k.
-  rewrite ?vctx_nth, ?transpose_nth. now rewrite ?map_map.
+- intros; simpl.
+  rewrite <-(fin_spec n i), <-(fin_spec n j), <-(fin_spec n k).
+  rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
 Corollary regular_r_atom a :

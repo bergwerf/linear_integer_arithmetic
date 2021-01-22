@@ -15,7 +15,6 @@ Notation vec := (Vector.t bool).
 Notation vnil := (Vector.nil _).
 Notation vcons := (Vector.cons _).
 Notation proj n := (λ v, Vector.nth v n).
-Notation findex i := (proj1_sig (Fin.to_nat i)).
 
 Notation "⟨ ⟩" := (vnil) (format "⟨ ⟩").
 Notation "h ;; t" := (vcons h _ t)
