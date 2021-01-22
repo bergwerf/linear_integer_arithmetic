@@ -9,11 +9,15 @@ Import ListNotations.
 (* Definition of a regular predicate. *)
 Section Regular_predicates.
 
+Section Regular_definition.
+
 Variable letter : Set.
 Variable P : list letter -> Prop.
 
+(* P is regular iff its domain can be decided using a DFA. *)
 Record regular := Regular {
   r_automaton : automaton letter;
+  r_det       : Deterministic r_automaton;
   r_size      : nat;
   r_finite    : Finite r_automaton r_size;
   r_dec       : ∀s t : state r_automaton, {s = t} + {s ≠ t};
@@ -28,10 +32,40 @@ Hypothesis is_regular : regular.
 Theorem regular_dec :
   {∃w, P w} + {∀w, ¬P w}.
 Proof.
-destruct is_regular as [A n size dec spec].
+destruct is_regular as [A _ n size dec spec].
 eapply dec_replace. apply spec.
 eapply Language_inhabited_dec.
 apply full_alphabet. apply dec. apply size.
+Qed.
+
+End Regular_definition.
+
+(* Replace predicate with an equivalent one. *)
+Theorem regular_ext {letter} P Q :
+  regular letter P -> (∀w, P w <-> Q w) -> regular letter Q.
+Proof.
+intros [A det size fin dec spec] H.
+eapply Regular with (r_automaton:=A).
+apply det. apply fin. apply dec.
+intros; rewrite <-H; apply spec.
+Qed.
+
+(* Change the domain alphabet. *)
+Theorem regular_proj {letter letter'} P Q f :
+  regular letter P -> (∀w, P (map f w) <-> Q w) -> regular letter' Q.
+Proof.
+intros [A det size fin dec spec] H.
+pose(B := Automata.proj _ A _ (λ c, [f c])).
+eapply Regular with (r_automaton:=B).
+- apply Automata.proj_det; easy.
+- apply Automata.proj_size, fin.
+- apply dec.
+- intros. rewrite <-H, <-spec.
+  unfold B; rewrite Automata.proj_spec.
+  unfold Automata.Image; rewrite map_map_singleton. split.
+  + intros [v [H1 H2]]. apply Forall2_In_singleton in H1; congruence.
+  + intros Hfw; exists (map f w); split.
+    now apply Forall2_In_singleton. easy.
 Qed.
 
 End Regular_predicates.

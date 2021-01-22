@@ -402,6 +402,14 @@ Proof.
 intros; apply proj_Accepts.
 Qed.
 
+Theorem proj_det :
+  Deterministic A -> (∀c, length (f c) = 1) -> Deterministic proj.
+Proof.
+intros det Hc c s. simpl; unfold proj_trans.
+destruct (list_singleton _ (Hc c));
+rewrite H; simpl; rewrite app_nil_r. apply det.
+Qed.
+
 Theorem proj_size n :
   Finite A n -> Finite proj n.
 Proof.

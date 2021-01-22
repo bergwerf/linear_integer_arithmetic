@@ -149,27 +149,6 @@ Definition dfa_add_trans xyz (c : bool) :=
 Definition dfa_add :=
   Automaton ((bool × bool) × bool) bool false negb dfa_add_trans.
 
-Lemma finite_type {letter} (A : automaton letter) n :
-  (Σ Q, length Q = n /\ ∀s : state A, In s Q) -> Finite A n.
-Proof.
-intros [Q [Q_len Q_spec]]; exists Q; split. easy.
-intros s; exists s; easy.
-Qed.
-
-Lemma finite_unit :
-  Σ Q, length Q = 1 /\ ∀v : unit, In v Q.
-Proof.
-exists [tt]. split. easy.
-intros []; apply in_eq.
-Qed.
-
-Lemma finite_bool :
-  Σ Q, length Q = 2 /\ ∀b : bool, In b Q.
-Proof.
-exists [true; false]. split. easy.
-intros [|]; simpl; auto.
-Qed.
-
 Theorem dfa_zero_spec w :
   Language dfa_zero w <-> bnum w = 0%N.
 Proof.
@@ -203,7 +182,7 @@ Proof.
 unfold Language; induction w. easy.
 simpl in IHw; simpl Accepts; rewrite app_nil_r.
 simpl map. rewrite bnum_cons_eq.
-destruct a as [[|] [|]]; simpl.
+destruct a as [[] []]; simpl.
 1,4: rewrite and_comm, and_remove_r; [apply IHw|easy].
 all: apply exfalso_iff; [apply not_Accepts_nil|easy].
 Qed.
@@ -216,7 +195,7 @@ revert eq; induction w; destruct eq.
 1,2: easy. all: simpl Accepts; simpl map.
 1: rewrite bnum_cons_le.
 2: rewrite bnum_cons_lt.
-all: destruct a as [[|] [|]]; simpl.
+all: destruct a as [[] []]; simpl.
 all: try (rewrite and_remove_r; [|easy]).
 all: try (rewrite or_remove_r; [|easy]).
 1,3,4,7: rewrite <-N.lt_eq_cases.
@@ -228,6 +207,45 @@ Corollary dfa_le_spec w :
 Proof.
 apply dfa_le_Accepts.
 Qed.
+
+Section Lemmas.
+
+Lemma finite_type {letter} (A : automaton letter) n :
+  (Σ Q, length Q = n /\ ∀s : state A, In s Q) -> Finite A n.
+Proof.
+intros [Q [Q_len Q_spec]]; exists Q; split. easy.
+intros s; exists s; easy.
+Qed.
+
+Lemma finite_unit :
+  Σ Q, length Q = 1 /\ ∀v : unit, In v Q.
+Proof.
+exists [tt]. split. easy.
+intros []; apply in_eq.
+Qed.
+
+Lemma finite_bool :
+  Σ Q, length Q = 2 /\ ∀b : bool, In b Q.
+Proof.
+exists [true; false]. split. easy.
+intros []; simpl; auto.
+Qed.
+
+Lemma option_unit_dec (s t : option unit) :
+  {s = t} + {s ≠ t}.
+Proof.
+destruct s as [[]|], t as [[]|].
+1,4: now left. all: now right.
+Qed.
+
+Lemma option_bool_dec (s t : option bool) :
+  {s = t} + {s ≠ t}.
+Proof.
+destruct s as [[]|], t as [[]|].
+1,5,9: now left. all: now right.
+Qed.
+
+End Lemmas.
 
 Theorem dfa_add_Accepts w c :
   Accepts dfa_add w [c] <->
@@ -255,41 +273,85 @@ Lemma regular_R_zero i :
   regular (vec (S i)) (λ w, BinR (ctx w) (R_zero i)).
 Proof.
 destruct fin with (n:=S i)(i:=i) as [ith ith_i]. auto.
-pose(A := Automata.proj _ dfa_zero _ (λ v : vec (S i), [proj ith v])).
-eapply Regular with (r_automaton:=A).
-- apply Automata.proj_size, finite_type, finite_unit.
-- left; now destruct s, t.
-- intros w; rewrite <-ith_i at 3; simpl.
-  unfold A; rewrite Automata.proj_spec; unfold Automata.Image; split.
-  + intros [img [H1 H2]]. apply dfa_zero_spec in H2.
-    rewrite map_map_singleton in H1.
-    apply Forall2_In_singleton in H1; subst.
-    now rewrite vctx_nth, transpose_nth.
-  + intros. rewrite vctx_nth in H.
-    exists (map (proj ith) w); split.
-    * rewrite map_map_singleton. now apply Forall2_In_singleton.
-    * apply dfa_zero_spec. now rewrite transpose_nth in H.
+eapply regular_ext. eapply regular_proj. eapply Regular.
+- apply Automata.opt_det with (A:=dfa_zero); intros.
+  simpl; destruct c; simpl; lia.
+- apply Automata.opt_size, finite_type, finite_unit.
+- apply option_unit_dec.
+- apply Automata.opt_spec.
+- intros; apply dfa_zero_spec.
+- intros; simpl. rewrite <-ith_i at 2.
+  rewrite vctx_nth, transpose_nth. reflexivity.
 Qed.
 
 Lemma regular_R_one i :
   regular (vec (S i)) (λ w, BinR (ctx w) (R_one i)).
 Proof.
-Admitted.
+destruct fin with (n:=S i)(i:=i) as [ith ith_i]. auto.
+eapply regular_ext. eapply regular_proj. eapply Regular.
+- apply Automata.opt_det with (A:=dfa_one); intros.
+  simpl; destruct c, s; simpl; lia.
+- apply Automata.opt_size, finite_type, finite_bool.
+- apply option_bool_dec.
+- apply Automata.opt_spec.
+- intros; apply dfa_one_spec.
+- intros; simpl. rewrite <-ith_i at 2.
+  rewrite vctx_nth, transpose_nth. reflexivity.
+Qed.
 
 Lemma regular_R_eq i j :
   regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_eq i j)).
 Proof.
-Admitted.
+remember (1 + max i j) as n.
+destruct fin with (n:=n)(i:=i) as [ith ith_i]. lia.
+destruct fin with (n:=n)(i:=j) as [jth jth_j]. lia.
+pose(f (c : vec n) := (proj ith c, proj jth c)).
+eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
+- apply Automata.opt_det with (A:=dfa_eq); intros.
+  simpl; destruct c as [[] []], s; simpl; lia.
+- apply Automata.opt_size, finite_type, finite_unit.
+- apply option_unit_dec.
+- apply Automata.opt_spec.
+- intros; apply dfa_eq_spec.
+- intros; simpl. rewrite <-ith_i, <-jth_j.
+  rewrite ?vctx_nth, ?transpose_nth. now rewrite ?map_map.
+Qed.
 
 Lemma regular_R_le i j :
   regular (vec (1 + max i j)) (λ w, BinR (ctx w) (R_le i j)).
 Proof.
-Admitted.
+remember (1 + max i j) as n.
+destruct fin with (n:=n)(i:=i) as [ith ith_i]. lia.
+destruct fin with (n:=n)(i:=j) as [jth jth_j]. lia.
+pose(f (c : vec n) := (proj ith c, proj jth c)).
+eapply regular_proj with (f0:=f).
+eapply Regular with (r_automaton:=dfa_le).
+- easy.
+- apply finite_type, finite_bool.
+- apply bool_dec.
+- apply dfa_le_spec.
+- intros; simpl. rewrite <-ith_i, <-jth_j.
+  rewrite ?vctx_nth, ?transpose_nth. now rewrite ?map_map.
+Qed.
 
 Lemma regular_R_add i j k :
   regular (vec (1 + max (max i j) k)) (λ w, BinR (ctx w) (R_add i j k)).
 Proof.
-Admitted.
+remember (1 + max (max i j) k) as n.
+destruct fin with (n:=n)(i:=i) as [ith ith_i]. lia.
+destruct fin with (n:=n)(i:=j) as [jth jth_j]. lia.
+destruct fin with (n:=n)(i:=k) as [kth kth_k]. lia.
+pose(f (c : vec n) := ((proj ith c, proj jth c), proj kth c)).
+eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
+- apply Automata.opt_det with (A:=dfa_add); intros.
+  simpl; destruct c as [[[] []] []], s; simpl; lia.
+- apply Automata.opt_size, finite_type, finite_bool.
+- apply option_bool_dec.
+- apply Automata.opt_spec.
+- intros; apply dfa_add_spec.
+- intros; simpl. rewrite <-ith_i, <-jth_j, <-kth_k.
+  rewrite ?vctx_nth, ?transpose_nth. now rewrite ?map_map.
+Qed.
 
 Corollary regular_r_atom a :
   Σ n, regular (vec n) (λ w, BinR (ctx w) a).
