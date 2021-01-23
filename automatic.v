@@ -35,7 +35,8 @@ Variable Model : model atom domain.
 
 Variable decode : list bool -> domain.
 Variable encode : domain -> list bool.
-Hypothesis decode_encode : ∀x n, decode ((encode x) ++ repeat false n) = x.
+Hypothesis decode_padding : ∀l n, decode l = decode (l ++ repeat false n).
+Hypothesis decode_encode_id : ∀x, decode (encode x) = x.
 
 Variable default : domain.
 Hypothesis default_spec : ∀a Γ, Model Γ a <-> Model (Γ ++ [default]) a.
@@ -115,9 +116,9 @@ Theorem Realizes_dec φ :
 Proof.
 intros [n [use reg]].
 apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
-2: apply enumerate_vectors_spec. destruct reg.
+2: apply enumerate_vectors_spec. destruct reg as [Yes|No].
 - (* We have a witness. *)
-  left; destruct e as [w Hw]. now exists (vctx w).
+  left; destruct Yes as [w Hw]. now exists (vctx w).
 - (* A realizing context gives rise to a counter-example. *)
   right; intros Γ HΓ.
   (* Add default values to the context so it has exactly n elements. *)
@@ -131,11 +132,12 @@ apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
   pose(letter i := Vector.map (λ l, nth i l false) bits);
   pose(word := map letter (seq 0 size)).
   (* This word gives a contradiction. *)
-  apply n0 with (w:=word).
-  replace (vctx word) with (Vector.to_list Δ). rewrite HΔ; apply HΓ.
+  apply No with (w:=word).
+  replace (vctx word) with (Vector.to_list Δ).
+  rewrite HΔ; apply HΓ. clear use No HΓ HΔ.
   (* Show that the word construction is valid. *)
   replace Δ with (Vector.map decode (transpose word)). easy.
-  (* Encode both sides. *)
+  (* We may need a better way to get letters. *)
 Admitted.
 
 End Decide_wff_using_automata.

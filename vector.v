@@ -9,6 +9,28 @@ Section Theorems_about_vectors.
 
 Variable T : Type.
 
+Section Lemmas.
+
+Lemma Vector_to_list_cons {n} hd (tl : Vector.t T n) :
+  Vector.to_list (hd ;; tl) = hd :: Vector.to_list tl.
+Proof.
+easy.
+Qed.
+
+Lemma list_to_Vector (l : list T) n :
+  length l = n -> Σ v : Vector.t T n, Vector.to_list v = l.
+Proof.
+revert n; induction l; simpl; intros.
+- subst; now exists ⟨⟩.
+- destruct n. easy. injection H; intros.
+  apply IHl in H0 as [v Hv]; exists (a ;; v).
+  now rewrite Vector_to_list_cons, Hv.
+Qed.
+
+End Lemmas.
+
+Section Nth.
+
 Fixpoint fin n i : Fin.t (S n) :=
   match n with
   | 0   => Fin.F1
@@ -32,12 +54,6 @@ revert i; induction n, i; simpl; intros; try easy.
 rewrite IHn. easy. lia.
 Qed.
 
-Theorem Vector_to_list_cons {n} hd (tl : Vector.t T n) :
-  Vector.to_list (hd ;; tl) = hd :: Vector.to_list tl.
-Proof.
-easy.
-Qed.
-
 Theorem Vector_nth_to_list {n} (v : Vector.t T n) (i : Fin.t n) d :
   Vector.nth v i = nth (findex i) (Vector.to_list v) d.
 Proof.
@@ -45,11 +61,26 @@ induction v. easy.
 now apply Fin.caseS' with (p:=i).
 Qed.
 
-Theorem Vector_nth_map {n T'} (f : T -> T') (v : Vector.t T n) (i : Fin.t n) :
+End Nth.
+
+Section Mapping.
+
+Variable U : Type.
+Variable f : T -> U.
+
+Theorem Vector_nth_map {n} (v : Vector.t T n) (i : Fin.t n) :
   Vector.nth (Vector.map f v) i = f (Vector.nth v i).
 Proof.
 induction v. easy.
 now apply Fin.caseS' with (p:=i).
+Qed.
+
+Theorem Vector_map_take {n} v k (Hk : k <= n) :
+  Vector.map f (Vector.take k Hk v) = Vector.take k Hk (Vector.map f v).
+Proof.
+revert Hk; revert k; induction v as [|hd n tl];
+intros; destruct k; simpl; try easy.
+now rewrite IHtl.
 Qed.
 
 Theorem Vector_nth_map2_cons {n} (hs : Vector.t T n) ts i :
@@ -61,6 +92,10 @@ apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
 simpl Vector.map2. eapply Fin.caseS' with (p:=i); simpl.
 easy. apply IHts.
 Qed.
+
+End Mapping.
+
+Section Take.
 
 Theorem Vector_take_const {n} k (Hk : k <= n) (c : T) :
   Vector.take k Hk (Vector.const c n) = Vector.const c k.
@@ -79,14 +114,6 @@ apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
 simpl; rewrite IHts; easy.
 Qed.
 
-Theorem Vector_map_take {n T'} v (f : T -> T') k (Hk : k <= n) :
-  Vector.map f (Vector.take k Hk v) = Vector.take k Hk (Vector.map f v).
-Proof.
-revert Hk; revert k; induction v as [|hd n tl];
-intros; destruct k; simpl; try easy.
-now rewrite IHtl.
-Qed.
-
 Theorem Vector_take_to_list {n} (v : Vector.t T n) k (Hk : k <= n) :
   Vector.to_list (Vector.take k Hk v) = firstn k (Vector.to_list v).
 Proof.
@@ -96,15 +123,7 @@ simpl Vector.take; rewrite ?Vector_to_list_cons.
 simpl; now rewrite IHtl.
 Qed.
 
-Theorem list_to_Vector (l : list T) n :
-  length l = n -> Σ v : Vector.t T n, Vector.to_list v = l.
-Proof.
-revert n; induction l; simpl; intros.
-- subst; now exists ⟨⟩.
-- destruct n. easy. injection H; intros.
-  apply IHl in H0 as [v Hv]; exists (a ;; v).
-  now rewrite Vector_to_list_cons, Hv.
-Qed.
+End Take.
 
 End Theorems_about_vectors.
 
@@ -130,7 +149,7 @@ Qed.
 Theorem transpose_nth {n} (mat : list (Vector.t T n)) (i : Fin.t n)  :
   Vector.nth (transpose mat) i = map (λ v, Vector.nth v i) mat.
 Proof.
-induction mat; simpl. now induction i.
+induction mat; simpl. apply Vector.const_nth.
 rewrite <-IHmat. apply Vector_nth_map2_cons.
 Qed.
 
