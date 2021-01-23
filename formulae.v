@@ -1,6 +1,6 @@
 (* Formulae and interpretations of Presburger arithmetic. *)
 
-Require Import Utf8 List.
+Require Import Utf8 Nat List.
 From larith Require Import tactics notations utilities.
 Import ListNotations.
 
@@ -34,8 +34,34 @@ Fixpoint Realizes (Γ : list domain) (f : wff) :=
 
 Definition Use φ n := ∀Γ, Realizes Γ φ <-> Realizes (firstn n Γ) φ.
 
+Section Facts_about_usage.
+
+Theorem Use_not φ n :
+  Use φ n -> Use (wff_not φ) n.
+Proof.
+split; simpl; apply contra, H.
+Qed.
+
+Theorem Use_and φ ϕ n :
+  Use φ n -> Use ϕ n -> Use (wff_and φ ϕ) n.
+Proof.
+intros Hφ Hϕ; split; simpl.
+all: split; [apply (Hφ Γ)|apply (Hϕ Γ)]; apply H.
+Qed.
+
+Theorem Use_weaken φ m n :
+  Use φ m -> m <= n -> Use φ n.
+Proof.
+intros use le; intros Γ.
+rewrite (use (firstn n Γ)).
+now rewrite firstn_firstn, min_l.
+Qed.
+
+End Facts_about_usage.
+
 End First_order_formulae.
 
+Arguments wff_atom {_}.
 Arguments Realizes {_ _}.
 Arguments Use {_ _}.
 
@@ -46,7 +72,7 @@ Notation "∃[ φ ]" := (wff_ex _ φ) (format "∃[ φ ]").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
   (at level 20, format "A  |=  ( φ )[ Γ ]").
 
-Section Lemmas_about_realization.
+Section Facts_about_realization.
 
 Section Same_domain.
 
@@ -54,7 +80,7 @@ Variable dom atomA atomB : Type.
 Variable A : model atomA dom.
 Variable B : model atomB dom.
 
-Theorem realizes_ex φ ϕ :
+Theorem Realizes_ex φ ϕ :
   (∀Γ, A |= (φ)[Γ] <-> B |= (ϕ)[Γ]) ->
   ∀Γ, A |= (∃[φ])[Γ] <-> B |= (∃[ϕ])[Γ].
 Proof.
@@ -62,7 +88,7 @@ intros eqv; simpl; split; intros [x Hx];
 exists x; apply eqv, Hx.
 Qed.
 
-Theorem realizes_and φ1 φ2 ϕ1 ϕ2 :
+Theorem Realizes_and φ1 φ2 ϕ1 ϕ2 :
   (∀Γ, A |= (φ1)[Γ] <-> B |= (ϕ1)[Γ]) ->
   (∀Γ, A |= (φ2)[Γ] <-> B |= (ϕ2)[Γ]) ->
   ∀Γ, A |= (φ1 ∧` φ2)[Γ] <-> B |= (ϕ1 ∧` ϕ2)[Γ].
@@ -99,7 +125,7 @@ Qed.
 
 End Same_atoms.
 
-End Lemmas_about_realization.
+End Facts_about_realization.
 
 (* Atomic formulae for languages that we will be using. *)
 Section Atomic_formulae_for_linear_arithmetic.
@@ -126,8 +152,8 @@ End Atomic_formulae_for_linear_arithmetic.
 Notation formula := (wff la_atom).
 Notation rformula := (wff rel_atom).
 
-Definition formula_atom := wff_atom la_atom.
-Definition rformula_atom := wff_atom rel_atom.
+Definition formula_atom := @wff_atom la_atom.
+Definition rformula_atom := @wff_atom rel_atom.
 
 Coercion formula_atom : la_atom >-> formula.
 Coercion rformula_atom : rel_atom >-> rformula.
@@ -245,13 +271,13 @@ destruct a.
   destruct reduce_la_term with (j:=0)(x:=x)(n:=1) as [ϕx Hx];
   destruct reduce_la_term with (j:=0)(x:=y)(n:=1) as [ϕy Hy].
   eexists; symmetry; etransitivity. apply reduce_la_eq.
-  apply realizes_ex, realizes_and; easy.
+  apply Realizes_ex, Realizes_and; easy.
 - (* Less or equal relation. *)
   destruct reduce_la_term with (j:=0)(x:=x)(n:=2) as [ϕx Hx].
   destruct reduce_la_term with (j:=1)(x:=y)(n:=2) as [ϕy Hy].
   eexists; symmetry; etransitivity. apply reduce_la_le.
-  apply realizes_ex, realizes_ex, realizes_and.
-  apply la_le_iff_rel_le. apply realizes_and; easy.
+  apply Realizes_ex, Realizes_ex, Realizes_and.
+  apply la_le_iff_rel_le. apply Realizes_and; easy.
 Qed.
 
 Corollary convert_formula_to_rformula φ :

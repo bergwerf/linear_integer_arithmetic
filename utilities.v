@@ -336,6 +336,12 @@ revert i; induction n, i; simpl; intros; try easy.
 rewrite IHn. easy. lia.
 Qed.
 
+Theorem Vector_to_list_cons {n} hd (tl : Vector.t T n) :
+  Vector.to_list (hd ;; tl) = hd :: Vector.to_list tl.
+Proof.
+easy.
+Qed.
+
 Theorem Vector_nth_to_list {n} (v : Vector.t T n) (i : Fin.t n) d :
   Vector.nth v i = nth (findex i) (Vector.to_list v) d.
 Proof.
@@ -358,6 +364,40 @@ induction ts as [|t n ts]. easy.
 apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
 simpl Vector.map2. eapply Fin.caseS' with (p:=i); simpl.
 easy. apply IHts.
+Qed.
+
+Theorem Vector_take_const {n} k (Hk : k <= n) (c : T) :
+  Vector.take k Hk (Vector.const c n) = Vector.const c k.
+Proof.
+revert Hk; revert n; induction k; intros.
+easy. destruct n; simpl. easy. now rewrite IHk.
+Qed.
+
+Theorem Vector_take_map2_cons {n} (hs : Vector.t T n) ts k (Hk : k <= n) :
+  Vector.take k Hk (Vector.map2 cons hs ts) =
+  Vector.map2 cons (Vector.take k Hk hs) (Vector.take k Hk ts).
+Proof.
+revert Hk; revert k; induction ts as [|t n ts];
+intros; destruct k; try easy.
+apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
+simpl; rewrite IHts; easy.
+Qed.
+
+Theorem Vector_map_take {n T'} v (f : T -> T') k (Hk : k <= n) :
+  Vector.map f (Vector.take k Hk v) = Vector.take k Hk (Vector.map f v).
+Proof.
+revert Hk; revert k; induction v as [|hd n tl];
+intros; destruct k; simpl; try easy.
+now rewrite IHtl.
+Qed.
+
+Theorem Vector_take_to_list {n} (v : Vector.t T n) k (Hk : k <= n) :
+  Vector.to_list (Vector.take k Hk v) = firstn k (Vector.to_list v).
+Proof.
+revert Hk; revert k; induction v as [|hd n tl];
+intros; destruct k; try easy.
+simpl Vector.take; rewrite ?Vector_to_list_cons.
+simpl; now rewrite IHtl.
 Qed.
 
 End Theorems_about_vectors.

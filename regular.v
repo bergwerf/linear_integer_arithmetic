@@ -73,7 +73,7 @@ Section Regular_operations.
 Variable letter : Set.
 Variable P Q : list letter -> Prop.
 
-Theorem regular_conj :
+Theorem regular_conjunction :
   regular P -> regular Q -> regular (λ w, P w /\ Q w).
 Proof.
 intros [A detA sizeA finA decA specA] [B detB sizeB finB decB specB].
@@ -85,7 +85,7 @@ eapply Regular with (r_automaton:=Automata.prod _ A B).
 - intros. now rewrite <-Automata.prod_spec, specA, specB.
 Qed.
 
-Theorem regular_neg :
+Theorem regular_negation :
   regular P -> regular (λ w, ¬P w).
 Proof.
 intros [A det size fin dec spec].
