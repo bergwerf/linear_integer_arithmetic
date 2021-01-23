@@ -35,6 +35,10 @@ Variable Model : model atom domain.
 
 Variable decode : list bool -> domain.
 Variable encode : domain -> list bool.
+Hypothesis decode_encode : ∀x n, decode ((encode x) ++ repeat false n) = x.
+
+Variable default : domain.
+Hypothesis default_spec : ∀a Γ, Model Γ a <-> Model (Γ ++ [default]) a.
 
 Definition vctx {n} (w : list (vec n)) : list domain :=
   Vector.to_list (Vector.map decode (transpose w)).
@@ -42,18 +46,40 @@ Definition vctx {n} (w : list (vec n)) : list domain :=
 Definition Regular_wff φ := Σ n, Use Model φ n ×
   regular (λ w : list (vec n), Model |= (φ)[vctx w]).
 
-Theorem vctx_nth {n} (w : list (vec n)) i d :
+Section Lemmas.
+
+Lemma vctx_nth {n} (w : list (vec n)) i d :
   nth (findex i) (vctx w) d = decode (Vector.nth (transpose w) i).
 Proof.
-unfold vctx. rewrite <-Vector_nth_to_list. apply Vector_nth_map.
+unfold vctx. rewrite <-Vector_nth_to_list.
+apply Vector_nth_map.
 Qed.
 
-Theorem vctx_map_take {n} k (Hk : k <= n) w :
+Lemma vctx_map_take {n} k (Hk : k <= n) w :
   vctx (map (Vector.take k Hk) w) = firstn k (vctx w).
 Proof.
 unfold vctx. rewrite <-transpose_take, Vector_map_take.
 apply Vector_take_to_list.
 Qed.
+
+Lemma Realizes_ctx_default φ Γ :
+  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
+Proof.
+revert Γ; induction φ; simpl; intros.
+- apply default_spec.
+- split; apply contra, IHφ.
+- split. all: split; [apply (IHφ1 Γ)|apply (IHφ2 Γ)]; apply H.
+- split; intros [x Hx]; exists x; apply (IHφ (x :: Γ)), Hx.
+Qed.
+
+Corollary Realizes_ctx_repeat_default φ Γ n :
+  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ repeat default n].
+Proof.
+induction n; simpl. now rewrite app_nil_r.
+rewrite repeat_cons, IHn, app_assoc. apply Realizes_ctx_default.
+Qed.
+
+End Lemmas.
 
 Theorem construct_Regular_wff φ :
   (∀a, Regular_wff (wff_atom a)) -> Regular_wff φ.
@@ -74,28 +100,15 @@ induction φ; simpl.
     [apply reg1|intros|apply reg2|intros]; simpl.
     all: rewrite vctx_map_take; easy.
 - (* Quantification: tail projection. *)
-  admit.
-Abort.
-
-Variable default : domain.
-Hypothesis default_spec : ∀a Γ, Model Γ a <-> Model (Γ ++ [default]) a.
-
-Theorem Realizes_ctx_default φ Γ :
-  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
-Proof.
-revert Γ; induction φ; simpl; intros.
-- apply default_spec.
-- split; apply contra, IHφ.
-- split. all: split; [apply (IHφ1 Γ)|apply (IHφ2 Γ)]; apply H.
-- split; intros [x Hx]; exists x; apply (IHφ (x :: Γ)), Hx.
-Qed.
-
-Corollary Realizes_ctx_repeat_default φ Γ n :
-  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ repeat default n].
-Proof.
-induction n; simpl. now rewrite app_nil_r.
-rewrite repeat_cons, IHn, app_assoc. apply Realizes_ctx_default.
-Qed.
+  destruct IHφ as [n [use reg]]; destruct n.
+  + (* Edge case: formula is realized by default value. *)
+    exists 0; split.
+    eapply Use_ex, Use_weaken. apply use. lia.
+    eapply regular_ext. apply reg.
+    intros; simpl. admit.
+  + (* Remove top bit from the alphabet (non-deterministic projection). *)
+    exists n; split. apply Use_ex, use.
+Admitted.
 
 Theorem Realizes_dec φ :
   Regular_wff φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.

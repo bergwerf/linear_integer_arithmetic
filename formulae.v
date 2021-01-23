@@ -49,6 +49,13 @@ intros Hφ Hϕ; split; simpl.
 all: split; [apply (Hφ Γ)|apply (Hϕ Γ)]; apply H.
 Qed.
 
+Theorem Use_ex φ n :
+  Use φ (S n) -> Use (wff_ex φ) n.
+Proof.
+split; simpl; intros [x Hx];
+exists x; now apply (H (x :: Γ)).
+Qed.
+
 Theorem Use_weaken φ m n :
   Use φ m -> m <= n -> Use φ n.
 Proof.
@@ -62,15 +69,21 @@ End Facts_about_usage.
 End First_order_formulae.
 
 Arguments wff_atom {_}.
+Arguments wff_not {_}.
+Arguments wff_and {_}.
+Arguments wff_ex {_}.
 Arguments Realizes {_ _}.
 Arguments Use {_ _}.
 
 Notation model atom domain := (list domain -> atom -> Prop).
-Notation "¬` φ" := (wff_not _ φ) (at level 30, right associativity, format "¬` φ").
-Notation "φ ∧` ϕ" := (wff_and _ φ ϕ) (right associativity, at level 35).
-Notation "∃[ φ ]" := (wff_ex _ φ) (format "∃[ φ ]").
+Notation "¬` φ"            := (wff_not φ)
+                              (right associativity, at level 30, format "¬` φ").
+Notation "φ ∧` ϕ"          := (wff_and φ ϕ)
+                              (right associativity, at level 35).
+Notation "∃[ φ ]"          := (wff_ex φ)
+                              (format "∃[ φ ]").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
-  (at level 20, format "A  |=  ( φ )[ Γ ]").
+                              (at level 20, format "A  |=  ( φ )[ Γ ]").
 
 Section Facts_about_realization.
 
