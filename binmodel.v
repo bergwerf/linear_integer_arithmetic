@@ -113,7 +113,7 @@ Qed.
 
 End Least_significant_bit_first_binary_numbers.
 
-(* All r_atom formulas are regular. *)
+(* All rel_atom formulas are regular. *)
 Section Regular_relations.
 
 Notation ctx := (vctx _ bnum).
@@ -348,15 +348,31 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
   rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
-Corollary regular_r_atom a :
-  Σ n, regular (λ w : list (vec n), BinR (ctx w) a).
+Lemma nth_firstn {X} i n l (d : X) :
+  i < n -> nth i (firstn n l) d = nth i l d.
 Proof.
-destruct a.
-- exists (S i); apply regular_rel_zero.
-- exists (S i); apply regular_rel_one.
-- exists (1 + max (max i j) k); apply regular_rel_add.
-- exists (1 + max i j); apply regular_rel_eq.
-- exists (1 + max i j); apply regular_rel_le.
+revert i n; induction l; destruct n, i; simpl; try easy.
+intros H; apply IHl; lia.
+Qed.
+
+Corollary regular_rel_atom (a : rel_atom) :
+  Regular_wff BinR bnum (wff_atom a).
+Proof.
+destruct a;
+[ exists (1 + i)
+| exists (1 + i)
+| exists (1 + max (max i j) k)
+| exists (1 + max i j)
+| exists (1 + max i j)].
+all: split.
+2: apply regular_rel_zero.
+3: apply regular_rel_one.
+4: apply regular_rel_add.
+5: apply regular_rel_eq.
+6: apply regular_rel_le.
+all: rewrite Nat.add_comm; intros Γ; simpl.
+all: rewrite ?nth_firstn; try easy.
+all: lia.
 Qed.
 
 End Regular_relations.

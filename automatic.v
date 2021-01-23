@@ -127,3 +127,5 @@ induction φ; simpl.
 Abort.
 
 End Decide_wff_using_automata.
+
+Arguments Regular_wff {_ _}.
