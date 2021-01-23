@@ -3,6 +3,7 @@
 tactics.v
 notations.v
 utilities.v
+vector.v
 
 formulae.v
 automata.v

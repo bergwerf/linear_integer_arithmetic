@@ -3,7 +3,7 @@
 Require Vector.
 Require Import Utf8 Bool Nat List Lia.
 Require Import PeanoNat BinNat BinPos Nnat.
-From larith Require Import tactics notations utilities.
+From larith Require Import tactics notations utilities vector.
 From larith Require Import formulae automata regular automatic.
 Import ListNotations.
 

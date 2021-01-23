@@ -1,8 +1,8 @@
 (* Automata automatic structures. *)
 
 Require Vector.
-Require Import Utf8 PeanoNat BinNat List.
-From larith Require Import tactics notations utilities.
+Require Import Utf8 PeanoNat BinNat List Lia.
+From larith Require Import tactics notations utilities vector.
 From larith Require Import formulae regular.
 Import Nat ListNotations.
 
@@ -26,44 +26,6 @@ apply in_app_iff; destruct h; [right|left]; apply in_map, IHv.
 Qed.
 
 End Finite_vector_alphabet.
-
-(* Transpose a vector list. *)
-Section Matrix_transposition.
-
-Variable T : Type.
-
-(* Convert from a list of collumn vectors to a vector of row lists. *)
-Fixpoint transpose {n} (mat : list (Vector.t T n)) : Vector.t (list T) n :=
-  match mat with
-  | []     => Vector.const [] n
-  | v :: m => Vector.map2 cons v (transpose m)
-  end.
-
-Theorem transpose_cons {n} (mat : list (Vector.t T (S n))) :
-  transpose mat = map Vector.hd mat ;; transpose (map Vector.tl mat).
-Proof.
-induction mat; simpl. easy.
-apply Vector.caseS' with (v:=a).
-intros; now rewrite IHmat.
-Qed.
-
-Theorem transpose_nth {n} (mat : list (Vector.t T n)) (i : Fin.t n)  :
-  Vector.nth (transpose mat) i = map (λ v, Vector.nth v i) mat.
-Proof.
-induction mat; simpl. now induction i.
-rewrite <-IHmat. apply Vector_nth_map2_cons.
-Qed.
-
-Theorem transpose_take {n} k (Hk : k <= n) mat :
-  Vector.take k Hk (transpose mat) = transpose (map (Vector.take k Hk) mat).
-Proof.
-induction mat; simpl. apply Vector_take_const.
-rewrite <-IHmat; apply Vector_take_map2_cons.
-Qed.
-
-End Matrix_transposition.
-
-Arguments transpose {_ _}.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
 Section Decide_wff_using_automata.
@@ -93,18 +55,7 @@ unfold vctx. rewrite <-transpose_take, Vector_map_take.
 apply Vector_take_to_list.
 Qed.
 
-Theorem regular_wff_dec φ :
-  Regular_wff φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.
-Proof.
-intros [n [use reg]].
-apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
-2: apply enumerate_vectors_spec. destruct reg.
-- left. destruct e as [w Hw]. now exists (vctx w).
-- right. intros Γ HΓ. apply use in HΓ; eapply n0.
-  admit.
-Admitted.
-
-Theorem regular_wff φ :
+Theorem construct_Regular_wff φ :
   (∀a, Regular_wff (wff_atom a)) -> Regular_wff φ.
 Proof.
 intros regular_atoms.
@@ -125,6 +76,54 @@ induction φ; simpl.
 - (* Quantification: tail projection. *)
   admit.
 Abort.
+
+Variable default : domain.
+Hypothesis default_spec : ∀a Γ, Model Γ a <-> Model (Γ ++ [default]) a.
+
+Theorem Realizes_ctx_default φ Γ :
+  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
+Proof.
+revert Γ; induction φ; simpl; intros.
+- apply default_spec.
+- split; apply contra, IHφ.
+- split. all: split; [apply (IHφ1 Γ)|apply (IHφ2 Γ)]; apply H.
+- split; intros [x Hx]; exists x; apply (IHφ (x :: Γ)), Hx.
+Qed.
+
+Corollary Realizes_ctx_repeat_default φ Γ n :
+  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ repeat default n].
+Proof.
+induction n; simpl. now rewrite app_nil_r.
+rewrite repeat_cons, IHn, app_assoc. apply Realizes_ctx_default.
+Qed.
+
+Theorem Realizes_dec φ :
+  Regular_wff φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.
+Proof.
+intros [n [use reg]].
+apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
+2: apply enumerate_vectors_spec. destruct reg.
+- (* We have a witness. *)
+  left; destruct e as [w Hw]. now exists (vctx w).
+- (* A realizing context gives rise to a counter-example. *)
+  right; intros Γ HΓ.
+  (* Add default values to the context so it has exactly n elements. *)
+  apply Realizes_ctx_repeat_default with (n:=n), use in HΓ.
+  assert(length (firstn n (Γ ++ repeat default n)) = n). {
+    apply firstn_length_le. rewrite app_length, repeat_length. lia. }
+  apply list_to_Vector in H as [Δ HΔ].
+  (* Encode context as booleans, and generate a word. *)
+  pose(bits := Vector.map encode Δ);
+  pose(size := Vector.fold_right max (Vector.map (@length _) bits) 0);
+  pose(letter i := Vector.map (λ l, nth i l false) bits);
+  pose(word := map letter (seq 0 size)).
+  (* This word gives a contradiction. *)
+  apply n0 with (w:=word).
+  replace (vctx word) with (Vector.to_list Δ). rewrite HΔ; apply HΓ.
+  (* Show that the word construction is valid. *)
+  replace Δ with (Vector.map decode (transpose word)). easy.
+  (* Encode both sides. *)
+Admitted.
 
 End Decide_wff_using_automata.
 
