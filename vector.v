@@ -5,7 +5,7 @@ Require Import Utf8 PeanoNat List Lia.
 From larith Require Import tactics notations.
 Import ListNotations.
 
-Section Type_abstraction.
+Section Type_agnostic.
 
 Variable X : Type.
 Notation vec := (Vector.t X).
@@ -126,7 +126,7 @@ Qed.
 
 End Take.
 
-End Type_abstraction.
+End Type_agnostic.
 
 Section Matrix_transposition.
 

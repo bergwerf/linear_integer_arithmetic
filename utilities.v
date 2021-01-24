@@ -117,31 +117,57 @@ intros. destruct l. easy. destruct l.
 now exists x. easy.
 Qed.
 
-Theorem map_map_singleton {X Y} (f : X -> Y) xs :
-  map (λ x, [f x]) xs = map (λ y, [y]) (map f xs).
+Section Forall2.
+
+Section Type_agnostic.
+
+Variable X Y Z : Type.
+Variable R S : X -> Y -> Prop.
+
+Theorem Forall2_eq (l l' : list X) :
+  Forall2 eq l l' <-> l = l'.
 Proof.
-now rewrite map_map.
+revert l'; induction l; destruct l'; try easy.
+split; intros H; inv H. apply IHl in H5; now subst.
+apply Forall2_cons, IHl; easy.
 Qed.
 
-Theorem Forall2_In_singleton {X} (l l' : list X) :
+Theorem Forall2_impl xs ys :
+  Forall2 R xs ys -> (∀x y, R x y -> S x y) -> Forall2 S xs ys.
+Proof.
+intros HR HRS; induction HR. apply Forall2_nil.
+apply Forall2_cons. apply HRS, H. apply IHHR.
+Qed.
+
+Theorem Forall2_map (f : Z -> Y) xs zs :
+  Forall2 R xs (map f zs) <-> Forall2 (λ x z, R x (f z)) xs zs.
+Proof.
+revert zs; induction xs; destruct zs; simpl; intros; try easy.
+split; intros H; inv H. all: apply Forall2_cons; [easy|now apply IHxs].
+Qed.
+
+End Type_agnostic.
+
+Corollary Forall2_In_singleton {X} (l l' : list X) :
   Forall2 (@In _) l (map (λ x, [x]) l') <-> l = l'.
 Proof.
-revert l'; induction l, l'; simpl; try easy. split; intros.
-- inv H. inv H3. apply IHl in H5; now subst.
-- apply Forall2_cons. left; congruence. apply IHl; congruence.
+rewrite Forall2_map, <-Forall2_eq. split; intros.
+all: eapply Forall2_impl; [apply H|].
+all: intros; simpl in *. inv H0. now left.
 Qed.
 
-Theorem Forall2_map {X Y Z} (R : X -> Z -> Prop) xs ys (f : Y -> Z) :
-  Forall2 R xs (map f ys) -> Forall2 (λ x y, R x (f y)) xs ys.
-Proof.
-revert ys; induction xs; destruct ys; simpl; intros; try easy.
-inv H. apply Forall2_cons. easy. now apply IHxs.
-Qed.
+End Forall2.
 
 Section Mapping.
 
 Variable X Y : Type.
 Variable f : X -> Y.
+
+Theorem map_map_singleton xs :
+  map (λ x, [f x]) xs = map (λ y, [y]) (map f xs).
+Proof.
+now rewrite map_map.
+Qed.
 
 Theorem nth_map i l d x :
   nth i l d = x -> nth i (map f l) (f d) = f x.
@@ -314,6 +340,6 @@ End List_constructions_using_decidability.
 
 End Theorems_about_lists.
 
+Arguments remove_None {_}.
 Arguments list_isect {_}.
 Arguments list_subt {_}.
-Arguments remove_None {_}.

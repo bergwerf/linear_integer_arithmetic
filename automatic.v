@@ -106,7 +106,7 @@ eapply Regular.
     replace (_ :: vctx w) with (vctx v). easy. clear H2.
     unfold vctx; rewrite transpose_cons; simpl.
     rewrite Vector_to_list_cons; apply wd, wd, wd, wd.
-    apply Forall2_map in H1; induction H1; simpl. easy.
+    apply Forall2_map with (f:=f) in H1. induction H1; simpl. easy.
     rewrite IHForall2. destruct H as [R|[R|]]; subst; easy.
   + (* Given a witness, find a word for φ. *)
     intros [x Hx].
