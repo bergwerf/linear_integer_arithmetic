@@ -1,9 +1,9 @@
-(* An automatic structure for relational formulae. *)
+(* An automatic structure for rformula. *)
 
 Require Vector.
 Require Import Utf8 Bool Nat List Lia.
-Require Import PeanoNat BinNat BinPos Nnat.
-From larith Require Import tactics notations utilities vector.
+Require Import PeanoNat BinNat Nnat.
+From larith Require Import tactics notations utilities vector binary.
 From larith Require Import formulae automata regular automatic.
 Import ListNotations.
 
@@ -44,77 +44,7 @@ apply similar_models; clear Γ.
       now rewrite Nat2N.inj_compare.
 Qed.
 
-(* Translate lists of booleans to a binary number. *)
-Section Least_significant_bit_first_binary_numbers.
-
-Fixpoint bnum (bits : list bool) :=
-  match bits with
-  | []      => 0%N
-  | b :: bs =>
-    match (bnum bs) with
-    | 0%N     => if b then 1%N else 0%N
-    | N.pos p => N.pos (if b then p~1 else p~0)
-    end
-  end.
-
-Theorem bnum_cons x xs :
-  (bnum (x :: xs) = bnum [x] + 2 * (bnum xs))%N.
-Proof.
-simpl; now destruct x, (bnum xs).
-Qed.
-
-Corollary bnum_cons_eq_one l :
-  bnum (true :: l) = 1%N <-> bnum l = 0%N.
-Proof.
-rewrite bnum_cons; simpl bnum. lia.
-Qed.
-
-Theorem bnum_cons_compare x xs y ys :
-  (bnum (x :: xs) ?= bnum (y :: ys) =
-  Pos.switch_Eq (Bool.compare x y) (bnum xs ?= bnum ys))%N.
-Proof.
-simpl; destruct x, y, (bnum xs), (bnum ys); simpl; try easy.
-1: rewrite Pos.compare_xI_xI. 4: rewrite Pos.compare_xO_xO.
-3: apply Pos.compare_xO_xI. 2: apply Pos.compare_xI_xO.
-all: now destruct (p ?= p0)%positive.
-Qed.
-
-Corollary bnum_cons_eq x xs y ys :
-  bnum (x :: xs) = bnum (y :: ys) <-> x = y /\ bnum xs = bnum ys.
-Proof.
-rewrite <-?N.compare_eq_iff, bnum_cons_compare.
-now destruct x, y, (bnum xs ?= bnum ys)%N.
-Qed.
-
-Corollary bnum_cons_le x xs y ys :
-  (bnum (x :: xs) <= bnum (y :: ys) <->
-  bnum xs < bnum ys \/ bnum xs = bnum ys /\ Bool.le x y)%N.
-Proof.
-rewrite <-?N.compare_le_iff, <-N.compare_lt_iff;
-rewrite <-N.compare_eq_iff, bnum_cons_compare.
-destruct x, y, (bnum xs ?= bnum ys)%N eqn:H; simpl.
-all: try (rewrite and_remove_r; [|easy]).
-all: try (rewrite or_remove_r; [|easy]).
-all: try (rewrite or_comm, or_remove_r; [|easy]).
-all: try easy.
-Qed.
-
-Corollary bnum_cons_lt x xs y ys :
-  (bnum (x :: xs) < bnum (y :: ys) <->
-  bnum xs < bnum ys \/ bnum xs = bnum ys /\ Bool.lt x y)%N.
-Proof.
-rewrite <-?N.compare_lt_iff, <-N.compare_eq_iff, bnum_cons_compare.
-destruct x, y, (bnum xs ?= bnum ys)%N eqn:H; simpl.
-all: try (rewrite and_remove_r; [|easy]).
-all: try (rewrite or_remove_r; [|easy]).
-all: try (rewrite or_comm, or_remove_r; [|easy]).
-all: try easy.
-Qed.
-
-End Least_significant_bit_first_binary_numbers.
-
-(* All rel_atom formulae are regular. *)
-Section Regular_relations.
+Section Relational_formulae_are_regular.
 
 Notation ctx := (vctx _ bnum).
 Notation iffb := (Bool.eqb).
@@ -355,7 +285,7 @@ revert i n; induction l; destruct n, i; simpl; try easy.
 intros H; apply IHl; lia.
 Qed.
 
-Corollary regular_rel_atom (a : rel_atom) :
+Theorem Regular_wff_rel_atom (a : rel_atom) :
   Regular_wff BinR bnum (wff_atom a).
 Proof.
 destruct a;
@@ -375,4 +305,4 @@ all: rewrite ?nth_firstn; try easy.
 all: lia.
 Qed.
 
-End Regular_relations.
+End Relational_formulae_are_regular.
