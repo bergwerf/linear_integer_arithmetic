@@ -96,7 +96,7 @@ End Laws_of_logic.
 (******************************************************************************)
 (* II. Various list utilities.                                                *)
 (******************************************************************************)
-Section Theorems_about_lists.
+Module ListUtils.
 
 Theorem list_prod_nil_r {X Y} (l : list X) :
   @list_prod X Y l nil = nil.
@@ -187,32 +187,68 @@ Qed.
 
 End Mapping.
 
-Section Remove_None_from_option_list.
+Section Double_mapping.
+
+Variable X Y Z : Type.
+Variable f : X -> Y -> Z.
+
+Fixpoint map2 xs ys :=
+  match xs, ys with
+  | x :: xs', y :: ys' => f x y :: map2 xs' ys'
+  | _, _ => []
+  end.
+
+End Double_mapping.
+
+Arguments map2 {_ _ _}.
+
+Section Trimming.
+
+Variable X : Type.
+Variable default : X.
+
+Fixpoint trim n (l : list X) :=
+  match n with
+  | 0   => []
+  | S m =>
+    match l with
+    | [] => default :: trim m []
+    | x :: l' =>  x :: trim m l'
+    end
+  end.
+
+End Trimming.
+
+Arguments trim {_}.
+
+Section Strip_option_list.
 
 Variable X : Type.
 
-Fixpoint remove_None (l : list (option X)) :=
+Fixpoint strip (l : list (option X)) :=
   match l with
   | [] => []
-  | None :: l' => remove_None l'
-  | Some x :: l' => x :: remove_None l'
+  | None :: l' => strip l'
+  | Some x :: l' => x :: strip l'
   end.
 
-Theorem remove_None_map_Some l :
-  remove_None (map Some l) = l.
+Theorem strip_map_id l :
+  strip (map Some l) = l.
 Proof.
 induction l; simpl.
 easy. now rewrite IHl.
 Qed.
 
-Theorem remove_None_app l l' :
-  remove_None (l ++ l') = remove_None l ++ remove_None l'.
+Theorem strip_app l l' :
+  strip (l ++ l') = strip l ++ strip l'.
 Proof.
 induction l as [|[x|] l]; simpl. easy.
 now rewrite IHl. apply IHl.
 Qed.
 
-End Remove_None_from_option_list.
+End Strip_option_list.
+
+Arguments strip {_}.
 
 Section List_constructions_using_decidability.
 
@@ -266,6 +302,7 @@ Qed.
 
 End Powerset.
 
+
 Section Filtering.
 
 Variable P : X -> Prop.
@@ -300,46 +337,71 @@ Section Intersection_and_subtraction.
 
 Variable l l' : list X.
 
-Definition list_isect :=
+Definition intersect :=
   pfilter (λ x, In x l') (λ x, in_dec dec x l') l.
 
-Definition list_subt :=
+Definition subtract :=
   pfilter (λ x, ¬In x l') (λ x, not_dec _ (in_dec dec x l')) l. 
 
-Corollary list_isect_spec x :
-  In x list_isect <-> In x l /\ In x l'.
+Corollary intersect_spec x :
+  In x intersect <-> In x l /\ In x l'.
 Proof.
 apply pfilter_spec.
 Qed.
 
-Corollary list_subt_spec x :
-  In x list_subt <-> In x l /\ ¬In x l'.
+Corollary subtract_spec x :
+  In x subtract <-> In x l /\ ¬In x l'.
 Proof.
 apply pfilter_spec.
 Qed.
 
-Theorem list_subt_length :
-  length list_subt = length l - length list_isect.
+Theorem subtract_length :
+  length subtract = length l - length intersect.
 Proof.
-unfold list_subt, list_isect; induction l; simpl pfilter. easy.
+unfold subtract, intersect; induction l; simpl pfilter. easy.
 destruct (in_dec dec a l'), (not_dec _ _); try easy.
 simpl length; rewrite IHl0; clear IHl0. remember (pfilter _ _ l0) as l1.
 assert(length l1 <= length l0) by (subst; apply pfilter_length). lia.
 Qed.
 
-Corollary list_isect_length :
-  length list_isect = length l - length list_subt.
+Corollary intersect_length :
+  length intersect = length l - length subtract.
 Proof.
-rewrite list_subt_length.
-assert(length list_isect <= length l) by apply pfilter_length. lia.
+rewrite subtract_length.
+assert(length intersect <= length l) by apply pfilter_length. lia.
 Qed.
 
 End Intersection_and_subtraction.
 
 End List_constructions_using_decidability.
 
-End Theorems_about_lists.
+Arguments powerset {_}.
+Arguments pfilter {_}.
+Arguments intersect {_}.
+Arguments subtract {_}.
 
-Arguments remove_None {_}.
-Arguments list_isect {_}.
-Arguments list_subt {_}.
+Section Matrices.
+
+Variable X : Type.
+Variable default : X.
+Notation matrix := (list (list X)).
+
+Definition Matrix m n (mat : matrix) :=
+  length mat = m /\ Forall (eq n) (map (@length _) mat).
+
+Fixpoint transpose (mat : matrix) : matrix :=
+  match mat with
+  | []     => []
+  | v :: m =>
+    let mt := transpose m in
+    let n := max (length v) (length mt) in
+    map2 cons (trim default n v) (trim (repeat default (length m)) n mt)
+  end.
+
+End Matrices.
+
+Arguments Matrix {_}.
+Arguments transpose {_}.
+
+End ListUtils.
+Export ListUtils.

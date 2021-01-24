@@ -222,7 +222,7 @@ Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 Theorem pow_size n :
   Finite A n -> Finite pow (2^n).
 Proof.
-intros [Q [Q_len Q_can]]; exists (powerset _ Q).
+intros [Q [Q_len Q_can]]; exists (powerset Q).
 split; simpl. rewrite <-Q_len; apply powerset_length.
 (* ss_can associates ss with A-canonical states. *)
 intros ss; pose(ss_can_a := map (λ s, projT1 (Q_can s)) ss).
@@ -272,18 +272,18 @@ Definition opt_trans c s :=
 Definition opt := Automaton _ _ (Some (start A)) opt_accept opt_trans.
 
 Theorem opt_Accepts word s :
-  Accepts opt word s <-> Accepts A word (remove_None s).
+  Accepts opt word s <-> Accepts A word (strip s).
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - (* To avoid needing decidability over (state A), we use induction again. *)
   induction s as [|[a|] s]; simpl. easy. 2: apply IHs.
   split; intros; b_Prop.
   1,3: now left. 1,2: right; now apply IHs.
-- replace (flat_map (trans A c) (remove_None s))
-  with (remove_None (flat_map (opt_trans c) s)). apply IHw.
+- replace (flat_map (trans A c) (strip s))
+  with (strip (flat_map (opt_trans c) s)). apply IHw.
   induction s as [|[a|] s]; simpl. easy. 2: apply IHs.
   remember (trans A c a) as t; destruct t; simpl. apply IHs.
-  now rewrite remove_None_app, remove_None_map_Some, IHs.
+  now rewrite strip_app, strip_map_id, IHs.
 Qed.
 
 Corollary opt_spec word :
@@ -472,41 +472,41 @@ apply lt_wf_rect with (n:=n); clear n; intros n IH g v g_len.
 destruct (Terminal_dec v).
 left; now apply Path_finish.
 (* Determine if there is an intersection between g and adj v. *)
-pose(gv := list_isect dec g (adj v)).
+pose(gv := intersect dec g (adj v)).
 destruct (Nat.eq_dec (length gv) 0).
 - (* No path exists since g ∩ adj v = ∅. *)
   right; intros HC; inv HC. apply in_nil with (a:=w).
   apply length_zero_iff_nil in e; rewrite <-e.
-  now apply list_isect_spec.
+  now apply intersect_spec.
 - (* Show that g is not empty. *)
   assert(length g ≠ 0). {
-    intros H; apply n1. unfold gv; rewrite list_isect_length. lia. }
+    intros H; apply n1. unfold gv; rewrite intersect_length. lia. }
   (* Determine if a node in g ∩ adj v is connected through g \ adj v. *)
-  pose(g' := list_subt dec g (adj v)).
+  pose(g' := subtract dec g (adj v)).
   destruct (Exists_dec (Path g') gv).
   + (* Decide using the induction hypothesis. *)
     intros; eapply IH. 2: reflexivity.
-    unfold g'; rewrite g_len, list_subt_length.
+    unfold g'; rewrite g_len, subtract_length.
     fold gv; lia.
   + (* A path exists. *)
     left. apply Exists_exists in e as [w [H1w H2w]].
-    apply list_isect_spec in H1w.
+    apply intersect_spec in H1w.
     apply Path_step with (w:=w); try easy.
     eapply Path_subset. apply H2w.
-    intros; eapply list_subt_spec, H0.
+    intros; eapply subtract_spec, H0.
   + (* Any path would yield a contradiction. *)
     right. intros Hv; apply n2.
     apply Path_split with (g1:=g')(g2:=gv) in Hv as [Hv|Hv].
     (* Either we find a path through g', or we find an impossible path. *)
-    easy. exfalso; inv Hv. apply list_subt_spec in H0; easy.
+    easy. exfalso; inv Hv. apply subtract_spec in H0; easy.
     (* Show that g = g1 ∪ g2. *)
     intros w; split; intros.
     * destruct (in_dec dec w (adj v)).
-      right; now apply list_isect_spec.
-      left; now apply list_subt_spec.
+      right; now apply intersect_spec.
+      left; now apply subtract_spec.
     * destruct H0.
-      now apply list_subt_spec in H0.
-      now apply list_isect_spec in H0.
+      now apply subtract_spec in H0.
+      now apply intersect_spec in H0.
 Qed.
 
 End Connectivity.
