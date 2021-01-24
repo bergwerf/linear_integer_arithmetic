@@ -222,17 +222,15 @@ Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 Theorem pow_size n :
   Finite A n -> Finite pow (2^n).
 Proof.
-intros [Q [Q_len Q_can]].
-apply list_powerset with (l:=Q) in dec. 
-destruct dec as [PQ [PQ_len [PQ_can _]]]; clear dec; exists PQ.
-split. simpl; now rewrite PQ_len, Q_len. clear Q_len PQ_len.
+intros [Q [Q_len Q_can]]; exists (powerset _ Q).
+split; simpl. rewrite <-Q_len; apply powerset_length.
 (* ss_can associates ss with A-canonical states. *)
 intros ss; pose(ss_can_a := map (λ s, projT1 (Q_can s)) ss).
 (* ss_can associates ss_can_a with the canonical set in L. *)
-destruct (PQ_can ss_can_a) as [ss_can Hss].
+destruct (powerset_lookup _ dec Q ss_can_a) as [ss_can Hss].
 - intros s Hs. apply in_map_iff in Hs as [t [Hs Ht]].
   destruct (Q_can t); simpl in *; subst; easy.
-- clear PQ_can. exists ss_can; split. easy.
+- exists ss_can; split. easy.
   intros w; split; intros.
   all: apply pow_Accepts, Exists_exists; eexists; split; [apply in_eq|].
   (* If pow accepts w, then A accepts w from a single state s. *)

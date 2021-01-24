@@ -195,45 +195,47 @@ Hypothesis dec : ∀x y : X, {x = y} + {x ≠ y}.
 
 Section Powerset.
 
-(* Construct a powerset that can effectively give canonical members. *)
-Theorem list_powerset (l : list X) :
-  Σ Pl, (length Pl = 2^length l) ×
-    ((∀s, (∀x, In x s -> In x l) -> Σ t, In t Pl /\ ∀x, In x s <-> In x t) ×
-    (∀s x, In s Pl -> In x s -> In x l)).
+Fixpoint powerset (l : list X) :=
+  match l with
+  | []      => [[]]
+  | x :: l' => let p := powerset l' in p ++ map (cons x) p
+  end.
+
+Theorem powerset_length l :
+  length (powerset l) = 2^length l.
 Proof.
-(*
-To find a canonical element, this program essentially breaks down a given
-list in the order given by l. For each element it remembers if it was in the
-list and then removes it from the list for a recursive call. The list is then
-rebuilt in the same order as l. A more efficient approach could:
-- Use an ordering to sort the list (but the improvement here is unclear).
-- Represent sets as trees, or as l zipped with some list of booleans.
-  Here every element might be a canonical element.
-*)
-induction l.
-- exists [[]]; repeat split; simpl.
-  + intros s H; exists []; split. now left.
-    split; intros. exfalso; eapply H, H0. easy.
-  + intros s x [H|H]. now subst. easy.
-- destruct IHl as [Pl [Pl_len [IH1 IH2]]].
-  exists (Pl ++ map (cons a) Pl); repeat split.
-  + rewrite app_length, map_length, Pl_len; simpl; lia.
-  + intros s Hs; pose(s' := remove dec a s).
-    destruct (IH1 s') as [t Ht].
-    intros. apply in_remove in H as [H1 H2].
-    apply Hs in H1; inv H1; easy.
-    destruct (in_dec dec a s).
-    * exists (a :: t); split. apply in_app_iff; right.
-      apply in_map_iff; now exists t.
-      intros; split; intros. destruct (dec x a).
-      subst; apply in_eq. eapply in_cons, Ht. now apply in_in_remove.
-      inv H. apply Ht in H0. eapply in_remove, H0.
-    * exists t; split. apply in_app_iff; left. easy.
-      eapply notin_remove in n; rewrite <-n; apply Ht.
-  + intros s x H. apply in_app_or in H as [H|H]; intros.
-    * eapply in_cons, IH2. apply H. easy.
-    * apply in_map_iff in H as [t [R H]]; subst.
-      inv H0. apply in_eq. eapply in_cons, IH2. apply H. easy.
+induction l; simpl. easy.
+now rewrite Nat.add_0_r, app_length, map_length, ?IHl.
+Qed.
+
+Theorem powerset_spec l s x :
+  In s (powerset l) -> In x s -> In x l.
+Proof.
+revert s; induction l; simpl; intros.
+- destruct H; subst; easy.
+- destruct (dec a x). now left. right.
+  apply in_app_or in H as [H|H]. now apply IHl in H.
+  apply in_map_iff in H as [s' [R H]]; subst.
+  inv H0. now apply IHl in H.
+Qed.
+
+Theorem powerset_lookup l s :
+  (∀x, In x s -> In x l) ->
+  Σ t, In t (powerset l) /\ ∀x, In x s <-> In x t.
+Proof.
+revert s; induction l; simpl; intros.
+- exists []; split. now left. split; [apply H|easy].
+- pose(s' := remove dec a s).
+  destruct (IHl s') as [t [H1t H2t]].
+  + unfold s'; intros. apply in_remove in H0 as [H1 H2].
+    apply H in H1 as [H1|H1]. congruence. easy.
+  + exists (if in_dec dec a s then a :: t else t); split.
+    * destruct (in_dec dec a s); apply in_app_iff; [right|left].
+      apply in_map_iff; now exists t. easy.
+    * intros; destruct (in_dec dec a s); simpl; rewrite <-H2t.
+      destruct (dec x a); subst; split; intros H'; try destruct H'; auto.
+      right; now apply in_in_remove. congruence. now apply in_remove in H0.
+      unfold s'; rewrite notin_remove; easy.
 Qed.
 
 End Powerset.
