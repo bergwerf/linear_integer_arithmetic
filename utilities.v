@@ -193,7 +193,7 @@ Section List_constructions_using_decidability.
 Variable X : Type.
 Hypothesis dec : ∀x y : X, {x = y} + {x ≠ y}.
 
-Section Powerset_with_canonical_elements.
+Section Powerset.
 
 (* Construct a powerset that can effectively give canonical members. *)
 Theorem list_powerset (l : list X) :
@@ -236,9 +236,9 @@ induction l.
       inv H0. apply in_eq. eapply in_cons, IH2. apply H. easy.
 Qed.
 
-End Powerset_with_canonical_elements.
+End Powerset.
 
-Section Filter_by_a_predicate.
+Section Filtering.
 
 Variable P : X -> Prop.
 Hypothesis P_dec : ∀x, {P x} + {¬P x}.
@@ -266,9 +266,9 @@ induction l; simpl. easy.
 destruct (P_dec a); simpl; lia.
 Qed.
 
-End Filter_by_a_predicate.
+End Filtering.
 
-Section List_intersection_and_subtraction.
+Section Intersection_and_subtraction.
 
 Variable l l' : list X.
 
@@ -306,7 +306,7 @@ rewrite list_subt_length.
 assert(length list_isect <= length l) by apply pfilter_length. lia.
 Qed.
 
-End List_intersection_and_subtraction.
+End Intersection_and_subtraction.
 
 End List_constructions_using_decidability.
 

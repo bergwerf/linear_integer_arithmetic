@@ -7,8 +7,8 @@ Import ListNotations.
 
 Section Type_abstraction.
 
-Variable T : Type.
-Notation vec := (Vector.t T).
+Variable X : Type.
+Notation vec := (Vector.t X).
 
 Section Lemmas.
 
@@ -18,7 +18,7 @@ Proof.
 easy.
 Qed.
 
-Lemma list_to_Vector (l : list T) n :
+Lemma list_to_Vector (l : list X) n :
   length l = n -> Σ v : vec n, Vector.to_list v = l.
 Proof.
 revert n; induction l; simpl; intros.
@@ -66,8 +66,8 @@ End Nth.
 
 Section Mapping.
 
-Variable U : Type.
-Variable f : T -> U.
+Variable Y : Type.
+Variable f : X -> Y.
 
 Theorem Vector_nth_map {n} (v : vec n) (i : Fin.t n) :
   Vector.nth (Vector.map f v) i = f (Vector.nth v i).
@@ -98,7 +98,7 @@ End Mapping.
 
 Section Take.
 
-Theorem Vector_take_const {n} k (Hk : k <= n) (c : T) :
+Theorem Vector_take_const {n} k (Hk : k <= n) (c : X) :
   Vector.take k Hk (Vector.const c n) = Vector.const c k.
 Proof.
 revert Hk; revert n; induction k; intros.
@@ -130,11 +130,11 @@ End Type_abstraction.
 
 Section Matrix_transposition.
 
-Variable T : Type.
-Notation vec := (Vector.t T).
+Variable X : Type.
+Notation vec := (Vector.t X).
 
 (* Convert from a list of collumn vectors to a vector of row lists. *)
-Fixpoint transpose {n} (mat : list (vec n)) : Vector.t (list T) n :=
+Fixpoint transpose {n} (mat : list (vec n)) : Vector.t (list X) n :=
   match mat with
   | []     => Vector.const [] n
   | v :: m => Vector.map2 cons v (transpose m)
