@@ -110,7 +110,7 @@ eapply Regular.
     rewrite IHForall2. destruct H as [R|[R|]]; subst; easy.
   + (* Given a witness, find a word for φ. *)
     intros [x Hx].
-    (* Decode x and add it the word. *)
+    (* Check encode x ;; transpose w. *)
 Admitted.
 
 Theorem construct_Regular_wff φ :
@@ -153,11 +153,11 @@ Proof.
 intros [n [use reg]].
 apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
 2: apply enumerate_vectors_spec. destruct reg as [Yes|No].
-- (* We have a witness. *)
+- (* There exists a context word that realizes φ. *)
   left; destruct Yes as [w Hw]. now exists (vctx w).
-- (* A realizing context gives rise to a counter-example. *)
+- (* There is no context word that realizes φ. *)
   right; intros Γ HΓ.
-  (* Add default values to the context so it has exactly n elements. *)
+  (* Add default values to the context and restrict it to n values. *)
   apply Realizes_ctx_repeat_default with (n:=n), use in HΓ.
   assert(length (firstn n (Γ ++ repeat default n)) = n). {
     apply firstn_length_le. rewrite app_length, repeat_length. lia. }
@@ -173,7 +173,7 @@ apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
   rewrite HΔ; apply HΓ. clear use No HΓ HΔ.
   (* Show that the word construction is valid. *)
   replace Δ with (Vector.map decode (transpose word)). easy.
-  (* We may need a better way to get letters. *)
+  (* We need a better way to get letters. *)
 Admitted.
 
 End Decide_wff_using_automata.
