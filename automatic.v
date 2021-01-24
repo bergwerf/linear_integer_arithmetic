@@ -55,14 +55,14 @@ Proof.
 unfold vctx; rewrite transpose_nil; easy.
 Qed.
 
-Lemma vctx_nth {n} (w : list (vec n)) i d :
+Lemma vctx_nth n (w : list (vec n)) i d :
   nth (findex i) (vctx w) d = decode (Vector.nth (transpose w) i).
 Proof.
 unfold vctx. rewrite <-Vector_nth_to_list.
 apply Vector_nth_map.
 Qed.
 
-Lemma vctx_map_take {n} k (Hk : k <= n) w :
+Lemma vctx_map_take n k (Hk : k <= n) w :
   vctx (map (Vector.take k Hk) w) = firstn k (vctx w).
 Proof.
 unfold vctx. rewrite <-transpose_take, Vector_map_take.

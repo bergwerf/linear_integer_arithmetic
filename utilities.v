@@ -380,28 +380,5 @@ Arguments pfilter {_}.
 Arguments intersect {_}.
 Arguments subtract {_}.
 
-Section Matrices.
-
-Variable X : Type.
-Variable default : X.
-Notation matrix := (list (list X)).
-
-Definition Matrix m n (mat : matrix) :=
-  length mat = m /\ Forall (eq n) (map (@length _) mat).
-
-Fixpoint transpose (mat : matrix) : matrix :=
-  match mat with
-  | []     => []
-  | v :: m =>
-    let mt := transpose m in
-    let n := max (length v) (length mt) in
-    map2 cons (trim default n v) (trim (repeat default (length m)) n mt)
-  end.
-
-End Matrices.
-
-Arguments Matrix {_}.
-Arguments transpose {_}.
-
 End ListUtils.
 Export ListUtils.

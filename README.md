@@ -7,7 +7,7 @@ introduction is given by [1].
 This algorithm is based on the description by Reddy and Loveland [2], which 
 constitutes an improvement over the algorithm given by Cooper, which in 
 turn is a big improvement over the original procedure by Presburger.
-The algorithm gives an effective decision procedure for formulas in the 
+The algorithm gives an effective decision procedure for formulae in the 
 structure `(Z, ≤, +, 0, 1)` using existential quantifier elimination (supported 
 by a divisibility predicate). The procedure should be capable of producing a 
 constructive proof of any closed formula or its negation.
@@ -21,10 +21,10 @@ optimizations and extensions that make this a more efficient and powerful
 approach than quantifier elimination.
 
 ### 2.1. A naive approach.
-I first construct a decision procedure using a very naive approach: translating 
-formulas into a language with an addition relation `A(x, y, z) <-> x + y = z` 
-and the usual equality and inequality relations. It should be straightforward to 
-apply the automata-based decision method to these formulas.
+I first construct a decision procedure using a naive approach: translating
+formulae into a language with an addition relation `A(x, y, z) <-> x + y = z`
+and the usual equality and inequality relations. It should be straightforward to
+apply the automata-based decision method to these formulae.
 
 ### 2.1. Basic optimizations.
 The most important optimization is using more sophisticated automata that 

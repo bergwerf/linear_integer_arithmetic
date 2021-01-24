@@ -1,4 +1,4 @@
-(* Models using binary numbers. *)
+(* An automatic structure for relational formulae. *)
 
 Require Vector.
 Require Import Utf8 Bool Nat List Lia.
@@ -113,7 +113,7 @@ Qed.
 
 End Least_significant_bit_first_binary_numbers.
 
-(* All rel_atom formulas are regular. *)
+(* All rel_atom formulae are regular. *)
 Section Regular_relations.
 
 Notation ctx := (vctx _ bnum).
