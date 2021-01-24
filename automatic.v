@@ -3,7 +3,7 @@
 Require Vector.
 Require Import Utf8 PeanoNat BinNat List Lia.
 From larith Require Import tactics notations utilities vector.
-From larith Require Import formulae regular.
+From larith Require Import formulae automata regular.
 Import Nat ListNotations.
 
 (* Finite-length vectors form a finite alphabet. *)
@@ -49,6 +49,12 @@ Definition Regular_wff φ := Σ n, Use Model φ n ×
 
 Section Lemmas.
 
+Lemma vctx_nil (w : list (vec 0)) :
+  vctx w = [].
+Proof.
+unfold vctx; rewrite transpose_nil; easy.
+Qed.
+
 Lemma vctx_nth {n} (w : list (vec n)) i d :
   nth (findex i) (vctx w) d = decode (Vector.nth (transpose w) i).
 Proof.
@@ -82,6 +88,31 @@ Qed.
 
 End Lemmas.
 
+Theorem regular_ex φ n :
+  regular (λ w : list (vec (S n)), Model |= (φ)[vctx w]) ->
+  regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
+Proof.
+intros [A det size fin dec spec].
+pose(f (v : vec n) := [true ;; v; false ;; v]).
+eapply Regular.
+- apply Automata.pow_det.
+- apply Automata.pow_size, Automata.proj_size with (f:=f), fin. apply dec.
+- simpl; apply list_eq_dec, dec.
+- intros; simpl.
+  rewrite Automata.pow_spec, Automata.proj_spec; split.
+  + (* Given a word for φ, determine a witness. *)
+    intros [v [H1 H2]]. apply spec in H2.
+    exists (decode (map Vector.hd v)).
+    replace (_ :: vctx w) with (vctx v). easy. clear H2.
+    unfold vctx; rewrite transpose_cons; simpl.
+    rewrite Vector_to_list_cons; apply wd, wd, wd, wd.
+    apply Forall2_map in H1; induction H1; simpl. easy.
+    rewrite IHForall2. destruct H as [R|[R|]]; subst; easy.
+  + (* Given a witness, find a word for φ. *)
+    intros [x Hx].
+    (* Decode x and add it the word. *)
+Admitted.
+
 Theorem construct_Regular_wff φ :
   (∀a, Regular_wff (wff_atom a)) -> Regular_wff φ.
 Proof.
@@ -100,16 +131,21 @@ induction φ; simpl.
   + apply regular_conjunction; eapply regular_proj;
     [apply reg1|intros|apply reg2|intros]; simpl.
     all: rewrite vctx_map_take; easy.
+    Unshelve. apply le_max_l. apply le_max_r.
 - (* Quantification: tail projection. *)
   destruct IHφ as [n [use reg]]; destruct n.
-  + (* Edge case: formula is realized by default value. *)
+  + (* Edge case: the quantified formula is realized by an empty context. *)
     exists 0; split.
     eapply Use_ex, Use_weaken. apply use. lia.
     eapply regular_ext. apply reg.
-    intros; simpl. admit.
+    intros; simpl; rewrite vctx_nil; split.
+    intros; exists default; apply Realizes_ctx_default in H; easy.
+    intros [x Hx]; apply use in Hx; easy.
   + (* Remove top bit from the alphabet (non-deterministic projection). *)
-    exists n; split. apply Use_ex, use.
-Admitted.
+    exists n; split.
+    apply Use_ex, use.
+    apply regular_ex, reg.
+Qed.
 
 Theorem Realizes_dec φ :
   Regular_wff φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.

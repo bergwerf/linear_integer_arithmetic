@@ -128,8 +128,65 @@ Theorem Forall2_In_singleton {X} (l l' : list X) :
 Proof.
 revert l'; induction l, l'; simpl; try easy. split; intros.
 - inv H. inv H3. apply IHl in H5; now subst.
-- apply Forall2_cons. left; congruence. apply IHl; congruence. 
+- apply Forall2_cons. left; congruence. apply IHl; congruence.
 Qed.
+
+Theorem Forall2_map {X Y Z} (R : X -> Z -> Prop) xs ys (f : Y -> Z) :
+  Forall2 R xs (map f ys) -> Forall2 (λ x y, R x (f y)) xs ys.
+Proof.
+revert ys; induction xs; destruct ys; simpl; intros; try easy.
+inv H. apply Forall2_cons. easy. now apply IHxs.
+Qed.
+
+Section Mapping.
+
+Variable X Y : Type.
+Variable f : X -> Y.
+
+Theorem nth_map i l d x :
+  nth i l d = x -> nth i (map f l) (f d) = f x.
+Proof.
+revert i; induction l; destruct i; simpl.
+1-3: congruence. apply IHl.
+Qed.
+
+Hypothesis f_inj : ∀x x', f x = f x' -> x = x'.
+
+Theorem nth_map_inj i l d x :
+  nth i (map f l) (f d) = f x -> nth i l d = x.
+Proof.
+revert i; induction l; destruct i; simpl.
+1-3: apply f_inj. apply IHl.
+Qed.
+
+End Mapping.
+
+Section Remove_None_from_option_list.
+
+Variable X : Type.
+
+Fixpoint remove_None (l : list (option X)) :=
+  match l with
+  | [] => []
+  | None :: l' => remove_None l'
+  | Some x :: l' => x :: remove_None l'
+  end.
+
+Theorem remove_None_map_Some l :
+  remove_None (map Some l) = l.
+Proof.
+induction l; simpl.
+easy. now rewrite IHl.
+Qed.
+
+Theorem remove_None_app l l' :
+  remove_None (l ++ l') = remove_None l ++ remove_None l'.
+Proof.
+induction l as [|[x|] l]; simpl. easy.
+now rewrite IHl. apply IHl.
+Qed.
+
+End Remove_None_from_option_list.
 
 Section List_constructions_using_decidability.
 
@@ -252,56 +309,6 @@ Qed.
 End List_intersection_and_subtraction.
 
 End List_constructions_using_decidability.
-
-Section Option_list_filtering.
-
-Variable X : Type.
-
-Fixpoint remove_None (l : list (option X)) :=
-  match l with
-  | [] => []
-  | None :: l' => remove_None l'
-  | Some x :: l' => x :: remove_None l'
-  end.
-
-Theorem remove_None_map_Some l :
-  remove_None (map Some l) = l.
-Proof.
-induction l; simpl.
-easy. now rewrite IHl.
-Qed.
-
-Theorem remove_None_app l l' :
-  remove_None (l ++ l') = remove_None l ++ remove_None l'.
-Proof.
-induction l as [|[x|] l]; simpl. easy.
-now rewrite IHl. apply IHl.
-Qed.
-
-End Option_list_filtering.
-
-Section Nth_element_of_a_mapped_list.
-
-Variable X Y : Type.
-Variable f : X -> Y.
-
-Theorem nth_map i Γ d x :
-  nth i Γ d = x -> nth i (map f Γ) (f d) = f x.
-Proof.
-revert i; induction Γ; destruct i; simpl.
-1-3: congruence. apply IHΓ.
-Qed.
-
-Hypothesis f_inj : ∀x x', f x = f x' -> x = x'.
-
-Theorem nth_map_inj i Γ d x :
-  nth i (map f Γ) (f d) = f x -> nth i Γ d = x.
-Proof.
-revert i; induction Γ; destruct i; simpl.
-1-3: apply f_inj. apply IHΓ.
-Qed.
-
-End Nth_element_of_a_mapped_list.
 
 End Theorems_about_lists.
 

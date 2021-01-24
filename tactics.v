@@ -29,3 +29,9 @@ Ltac bool_to_Prop :=
 
 Ltac b_Prop := repeat bool_to_Prop.
 Ltac b_lia := b_Prop; try (symmetry; b_Prop); lia.
+
+Lemma wd {X Y} (f : X -> Y) x x' :
+  x = x' -> f x = f x'.
+Proof.
+congruence.
+Qed.

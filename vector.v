@@ -138,6 +138,13 @@ Fixpoint transpose {n} (mat : list (Vector.t T n)) : Vector.t (list T) n :=
   | v :: m => Vector.map2 cons v (transpose m)
   end.
 
+Lemma transpose_nil (mat : list (Vector.t T 0)) :
+  transpose mat = ⟨⟩.
+Proof.
+induction mat; simpl. easy.
+rewrite IHmat; apply Vector.case0 with (v:=a). easy.
+Qed.
+
 Theorem transpose_cons {n} (mat : list (Vector.t T (S n))) :
   transpose mat = map Vector.hd mat ;; transpose (map Vector.tl mat).
 Proof.
