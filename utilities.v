@@ -1,6 +1,6 @@
 (* Basic utilities for various purposes. *)
 
-Require Import Utf8 PeanoNat List Lia.
+Require Import Utf8 Nat PeanoNat List Lia.
 From larith Require Import tactics notations.
 Import ListNotations.
 
@@ -116,6 +116,27 @@ Proof.
 intros. destruct l. easy. destruct l.
 now exists x. easy.
 Qed.
+
+Notation lmax l := (fold_right max 0 l).
+
+Section Maximum.
+
+Lemma lmax_app l l' :
+  lmax (l ++ l') = max (lmax l) (lmax l').
+Proof.
+induction l; simpl. easy.
+rewrite IHl; lia.
+Qed.
+
+Lemma lmax_in n l :
+  In n l -> n <= lmax l.
+Proof.
+induction l; simpl. easy.
+intros [H|H]. subst. lia.
+apply IHl in H. lia.
+Qed.
+
+End Maximum.
 
 Section Forall2.
 

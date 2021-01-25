@@ -18,16 +18,6 @@ Proof.
 easy.
 Qed.
 
-Lemma list_to_Vector (l : list X) n :
-  length l = n -> Σ v : vec n, Vector.to_list v = l.
-Proof.
-revert n; induction l; simpl; intros.
-- subst; now exists ⟨⟩.
-- destruct n. easy. injection H; intros.
-  apply IHl in H0 as [v Hv]; exists (a ;; v).
-  now rewrite Vector_to_list_cons, Hv.
-Qed.
-
 End Lemmas.
 
 Section Nth.
@@ -84,16 +74,6 @@ intros; destruct k; simpl; try easy.
 now rewrite IHtl.
 Qed.
 
-Theorem Vector_nth_map2_cons n (hs : vec n) ts i :
-  Vector.nth (Vector.map2 cons hs ts) i =
-  Vector.nth hs i :: Vector.nth ts i.
-Proof.
-induction ts as [|t n ts]. easy.
-apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
-simpl Vector.map2. eapply Fin.caseS' with (p:=i); simpl.
-easy. apply IHts.
-Qed.
-
 End Mapping.
 
 Section Take.
@@ -103,16 +83,6 @@ Theorem Vector_take_const n k (Hk : k <= n) (c : X) :
 Proof.
 revert Hk; revert n; induction k; intros.
 easy. destruct n; simpl. easy. now rewrite IHk.
-Qed.
-
-Theorem Vector_take_map2_cons n (hs : vec n) ts k (Hk : k <= n) :
-  Vector.take k Hk (Vector.map2 cons hs ts) =
-  Vector.map2 cons (Vector.take k Hk hs) (Vector.take k Hk ts).
-Proof.
-revert Hk; revert k; induction ts as [|t n ts];
-intros; destruct k; try easy.
-apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
-simpl; rewrite IHts; easy.
 Qed.
 
 Theorem Vector_take_to_list n (v : vec n) k (Hk : k <= n) :
@@ -125,6 +95,22 @@ simpl; now rewrite IHtl.
 Qed.
 
 End Take.
+
+Section Casting.
+
+Variable default : X.
+
+Fixpoint cast n (l : list X) : vec n :=
+  match n with
+  | 0   => ⟨⟩
+  | S m =>
+    match l with
+    | []      => default ;; cast m []
+    | x :: l' => x ;; cast m l'
+    end
+  end.
+
+End Casting.
 
 End Type_agnostic.
 
@@ -155,11 +141,31 @@ apply Vector.caseS' with (v:=a).
 intros; now rewrite IHmat.
 Qed.
 
+Lemma Vector_nth_map2_cons n (hs : vec n) ts i :
+  Vector.nth (Vector.map2 cons hs ts) i =
+  Vector.nth hs i :: Vector.nth ts i.
+Proof.
+induction ts as [|t n ts]. easy.
+apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
+simpl Vector.map2. eapply Fin.caseS' with (p:=i); simpl.
+easy. apply IHts.
+Qed.
+
 Theorem transpose_nth n (mat : list (vec n)) (i : Fin.t n)  :
   Vector.nth (transpose mat) i = map (λ v, Vector.nth v i) mat.
 Proof.
 induction mat; simpl. apply Vector.const_nth.
 rewrite <-IHmat. apply Vector_nth_map2_cons.
+Qed.
+
+Lemma Vector_take_map2_cons n (hs : vec n) ts k (Hk : k <= n) :
+  Vector.take k Hk (Vector.map2 cons hs ts) =
+  Vector.map2 cons (Vector.take k Hk hs) (Vector.take k Hk ts).
+Proof.
+revert Hk; revert k; induction ts as [|t n ts];
+intros; destruct k; try easy.
+apply Vector.caseS' with (v:=hs); clear hs; intros h hs.
+simpl; rewrite IHts; easy.
 Qed.
 
 Theorem transpose_take n k (Hk : k <= n) mat :
@@ -171,4 +177,5 @@ Qed.
 
 End Matrix_transposition.
 
+Arguments cast {_}.
 Arguments transpose {_ _}.

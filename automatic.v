@@ -88,7 +88,7 @@ Qed.
 
 End Lemmas.
 
-Theorem regular_ex φ n :
+Lemma regular_ex φ n :
   regular (λ w : list (vec (S n)), Model |= (φ)[vctx w]) ->
   regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
 Proof.
@@ -147,6 +147,17 @@ induction φ; simpl.
     apply regular_ex, reg.
 Qed.
 
+Lemma determine_context_word Γ :
+  ∃w : list (vec (length Γ)), vctx w = Γ.
+Proof.
+pose(max_length (mat : list (list bool)) := lmax (map (@length _) mat)).
+pose(cast_matrix n mat := map (cast false n) mat).
+pose(dat := map encode Γ);
+pose(mat := transpose (cast_matrix (max_length dat) dat));
+pose(wrd := cast_matrix (length Γ) (Vector.to_list mat));
+exists wrd.
+Admitted.
+
 Theorem Realizes_dec φ :
   Regular_wff φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.
 Proof.
@@ -159,22 +170,13 @@ apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
   right; intros Γ HΓ.
   (* Add default values to the context and restrict it to n values. *)
   apply Realizes_ctx_repeat_default with (n:=n), use in HΓ.
-  assert(length (firstn n (Γ ++ repeat default n)) = n). {
-    apply firstn_length_le. rewrite app_length, repeat_length. lia. }
-  apply list_to_Vector in H as [Δ HΔ].
-  (* Encode context as booleans, and generate a word. *)
-  pose(bits := Vector.map encode Δ);
-  pose(size := Vector.fold_right max (Vector.map (@length _) bits) 0);
-  pose(letter i := Vector.map (λ l, nth i l false) bits);
-  pose(word := map letter (seq 0 size)).
-  (* This word gives a contradiction. *)
-  apply No with (w:=word).
-  replace (vctx word) with (Vector.to_list Δ).
-  rewrite HΔ; apply HΓ. clear use No HΓ HΔ.
-  (* Show that the word construction is valid. *)
-  replace Δ with (Vector.map decode (transpose word)). easy.
-  (* We need a better way to get letters. *)
-Admitted.
+  remember (firstn n (Γ ++ repeat default n)) as Δ.
+  (* Now determine a context word and apply a contradiction. *)
+  destruct determine_context_word with (Γ:=Δ) as [w Hw].
+  replace n with (length Δ) in No.
+  + rewrite <-Hw in HΓ; apply No in HΓ; easy.
+  + subst; apply firstn_length_le. rewrite app_length, repeat_length. lia.
+Qed.
 
 End Decide_wff_using_automata.
 
