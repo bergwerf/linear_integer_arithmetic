@@ -14,8 +14,8 @@ Fixpoint enumerate_vectors n : list (vec n) :=
   | 0 => [⟨⟩]
   | S m =>
     let vs := enumerate_vectors m in
-    map (vcons false m) vs ++
-    map (vcons true m) vs
+    map (Vector.cons _ false m) vs ++
+    map (Vector.cons _ true m) vs
   end.
 
 Theorem enumerate_vectors_spec n (v : vec n) :
@@ -42,7 +42,7 @@ Variable default : domain.
 Hypothesis default_spec : ∀a Γ, Model Γ a <-> Model (Γ ++ [default]) a.
 
 Definition vctx {n} (w : list (vec n)) : list domain :=
-  Vector.to_list (Vector.map decode (transpose w)).
+  vlist (vmap decode (vmap vlist (transpose (voflist w)))).
 
 Definition Regular_wff φ := Σ n, Use Model φ n ×
   regular (λ w : list (vec n), Model |= (φ)[vctx w]).
@@ -56,18 +56,19 @@ unfold vctx; rewrite transpose_nil; easy.
 Qed.
 
 Lemma vctx_nth n (w : list (vec n)) i d :
-  nth (findex i) (vctx w) d = decode (Vector.nth (transpose w) i).
+  nth (findex i) (vctx w) d = decode (vlist (vnth (transpose (voflist w)) i)).
 Proof.
-unfold vctx. rewrite <-Vector_nth_to_list.
-apply Vector_nth_map.
+unfold vctx; rewrite <-vnth_nth_findex, ?vnth_vmap; reflexivity.
 Qed.
 
 Lemma vctx_map_take n k (Hk : k <= n) w :
-  vctx (map (Vector.take k Hk) w) = firstn k (vctx w).
+  vctx (map (vtake k Hk) w) = firstn k (vctx w).
 Proof.
-unfold vctx. rewrite <-transpose_take, Vector_map_take.
-apply Vector_take_to_list.
-Qed.
+unfold vctx.
+erewrite <-vtake_firstn with (Hk:=Hk); apply wd.
+rewrite <-vmap_vtake; apply wd.
+rewrite <-vmap_vtake, vtake_transpose.
+Admitted.
 
 Lemma Realizes_ctx_default φ Γ :
   Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
@@ -105,9 +106,11 @@ eapply Regular.
     exists (decode (map Vector.hd v)).
     replace (_ :: vctx w) with (vctx v). easy. clear H2.
     unfold vctx; rewrite transpose_cons; simpl.
-    rewrite Vector_to_list_cons; apply wd, wd, wd, wd.
-    apply Forall2_map with (f:=f) in H1. induction H1; simpl. easy.
-    rewrite IHForall2. destruct H as [R|[R|]]; subst; easy.
+    rewrite vlist_cons, <-map_vlist.
+    rewrite Vector.to_list_of_list_opp; apply wd, wd, wd.
+    (* apply Forall2_map with (f:=f) in H1. induction H1; simpl. easy.
+    rewrite IHForall2. destruct H as [R|[R|]]; subst; easy. *)
+    admit.
   + (* Given a witness, find a word for φ. *)
     intros [x Hx].
     (* Check encode x ;; transpose w. *)
@@ -150,12 +153,14 @@ Qed.
 Lemma determine_context_word Γ :
   ∃w : list (vec (length Γ)), vctx w = Γ.
 Proof.
+(*
 pose(max_length (mat : list (list bool)) := lmax (map (@length _) mat)).
 pose(cast_matrix n mat := map (cast false n) mat).
 pose(dat := map encode Γ);
 pose(mat := transpose (cast_matrix (max_length dat) dat));
 pose(wrd := cast_matrix (length Γ) (Vector.to_list mat));
 exists wrd.
+*)
 Admitted.
 
 Theorem Realizes_dec φ :
