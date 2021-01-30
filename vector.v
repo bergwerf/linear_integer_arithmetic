@@ -16,6 +16,7 @@ Notation vtake := (Vector.take).
 Notation vlist := (Vector.to_list).
 Notation voflist := (Vector.of_list).
 Notation vrepeat := (Vector.const).
+Notation vlist_voflist_id := (Vector.to_list_of_list_opp).
 
 Notation "⟨ ⟩" := (Vector.nil _) (format "⟨ ⟩").
 Notation "h ;; t" := (Vector.cons _ h _ t)
@@ -157,12 +158,6 @@ Fixpoint transpose {m n} (mat : matrix m n) : matrix n m :=
   | v ;; m => vmap2 (λ h t, h ;; t) v (transpose m)
   end.
 
-(* Transposition on lists of vectors. *)
-Definition ltranspose {n} (mat : list (vec n)) : list (list X) :=
-  vlist (vmap vlist (transpose (voflist mat))).
-
-Definition row {m n} i (mat : matrix m n) := vmap (λ v, vnth v i) mat.
-
 Theorem transpose_nil n (mat : matrix 0 n) :
   transpose mat = ⟨⟩.
 Proof.
@@ -215,14 +210,14 @@ simpl vmap2. eapply Fin.caseS' with (p:=i); simpl.
 easy. apply IHts.
 Qed.
 
-Theorem row_transpose m n (mat : matrix m n) (i : Fin.t m)  :
-  row i mat = vnth (transpose mat) i.
+Theorem vnth_transpose m n (mat : matrix m n) (i : Fin.t m)  :
+  vnth (transpose mat) i = vmap (λ v, vnth v i) mat.
 Proof.
-induction mat; simpl. symmetry; apply Vector.const_nth.
-now rewrite IHmat, vnth_vmap2_cons.
+induction mat; simpl. apply Vector.const_nth.
+rewrite <-IHmat, vnth_vmap2_cons; reflexivity.
 Qed.
 
-Lemma vtake_map2_cons m n (hs : vec n) (ts : matrix m n) k (Hk : k <= n) :
+Lemma vtake_vmap2_cons m n (hs : vec n) (ts : matrix m n) k (Hk : k <= n) :
   vtake k Hk (vmap2 (λ h t, h ;; t) hs ts) =
   vmap2 (λ h t, h ;; t) (vtake k Hk hs) (vtake k Hk ts).
 Proof.
@@ -236,7 +231,25 @@ Theorem vtake_transpose m n (mat : matrix m n) k (Hk : k <= m) :
   vtake k Hk (transpose mat) = transpose (vmap (vtake k Hk) mat).
 Proof.
 induction mat; simpl. apply vtake_vrepeat.
-now rewrite <-IHmat, vtake_map2_cons.
+now rewrite <-IHmat, vtake_vmap2_cons.
+Qed.
+
+Lemma vmap_vlist_vmap2_cons m n (hs : vec n) (ts : matrix m n) :
+  vmap vlist (vmap2 (λ h t, h ;; t) hs ts) = vmap2 cons hs (vmap vlist ts).
+Proof.
+induction hs.
+apply Vector.case0 with (v:=ts); easy.
+apply Vector.caseS' with (v:=ts); intros.
+simpl; rewrite IHhs; easy.
+Qed.
+
+Theorem transpose_convert m n n' (mat : matrix m n) (mat' : matrix m n') :
+  vlist mat = vlist mat' ->
+  vmap vlist (transpose mat) = vmap vlist (transpose mat').
+Proof.
+revert mat'; revert n'; induction mat; destruct mat'; simpl; try easy.
+intros H; inv H. apply IHmat in H2.
+rewrite ?vmap_vlist_vmap2_cons; congruence.
 Qed.
 
 End Matrix_transposition.

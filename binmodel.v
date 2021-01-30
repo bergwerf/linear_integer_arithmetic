@@ -210,7 +210,7 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_spec.
 - intros; apply dfa_zero_spec.
 - intros; simpl. erewrite <-(fin_spec i i) at 2.
-  rewrite vctx_nth, transpose_nth; reflexivity. easy.
+  rewrite vctx_nth; reflexivity. easy.
 Qed.
 
 Lemma regular_rel_one i :
@@ -224,14 +224,14 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_spec.
 - intros; apply dfa_one_spec.
 - intros; simpl. rewrite <-(fin_spec i i) at 2.
-  rewrite vctx_nth, transpose_nth; reflexivity. easy.
+  rewrite vctx_nth; reflexivity. easy.
 Qed.
 
 Lemma regular_rel_eq i j :
   regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (rel_eq i j)).
 Proof.
 remember (max i j) as n.
-pose(f (c : vec (S n)) := (vnth (fin n i) c, vnth (fin n j) c)).
+pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
 eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_eq); intros.
   simpl; destruct c as [[] []], s; simpl; lia.
@@ -241,14 +241,14 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - intros; apply dfa_eq_spec.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j).
-  rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
+  rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
 Lemma regular_rel_le i j :
   regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (rel_le i j)).
 Proof.
 remember (max i j) as n.
-pose(f (c : vec (S n)) := (vnth (fin n i) c, vnth (fin n j) c)).
+pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
 eapply regular_proj with (f0:=f).
 eapply Regular with (r_automaton:=dfa_le).
 - easy.
@@ -257,7 +257,7 @@ eapply Regular with (r_automaton:=dfa_le).
 - apply dfa_le_spec.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j).
-  rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
+  rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
 Lemma regular_rel_add i j k :
@@ -265,7 +265,7 @@ Lemma regular_rel_add i j k :
 Proof.
 remember (max (max i j) k) as n.
 pose(f (c : vec (S n)) :=
-  ((vnth (fin n i) c, vnth (fin n j) c), vnth (fin n k) c)).
+  ((vnth c (fin n i), vnth c (fin n j)), vnth c (fin n k))).
 eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_add); intros.
   simpl; destruct c as [[[] []] []], s; simpl; lia.
@@ -275,7 +275,7 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 - intros; apply dfa_add_spec.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j), <-(fin_spec n k).
-  rewrite ?vctx_nth, ?transpose_nth, ?map_map; reflexivity. all: lia.
+  rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
 Qed.
 
 Lemma nth_firstn {X} i n l (d : X) :

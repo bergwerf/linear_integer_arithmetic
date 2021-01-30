@@ -56,19 +56,22 @@ unfold vctx; rewrite transpose_nil; easy.
 Qed.
 
 Lemma vctx_nth n (w : list (vec n)) i d :
-  nth (findex i) (vctx w) d = decode (vlist (vnth (transpose (voflist w)) i)).
+  nth (findex i) (vctx w) d = decode (map (λ v, vnth v i) w).
 Proof.
-unfold vctx; rewrite <-vnth_nth_findex, ?vnth_vmap; reflexivity.
+unfold vctx; rewrite <-vnth_nth_findex, ?vnth_vmap.
+rewrite vnth_transpose, <-map_vlist, vlist_voflist_id; reflexivity.
 Qed.
 
 Lemma vctx_map_take n k (Hk : k <= n) w :
   vctx (map (vtake k Hk) w) = firstn k (vctx w).
 Proof.
 unfold vctx.
-erewrite <-vtake_firstn with (Hk:=Hk); apply wd.
+rewrite <-vtake_firstn with (Hk:=Hk); apply wd.
 rewrite <-vmap_vtake; apply wd.
 rewrite <-vmap_vtake, vtake_transpose.
-Admitted.
+apply transpose_convert; rewrite vlist_voflist_id.
+rewrite <-map_vlist, vlist_voflist_id; reflexivity.
+Qed.
 
 Lemma Realizes_ctx_default φ Γ :
   Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
@@ -101,19 +104,29 @@ eapply Regular.
 - simpl; apply list_eq_dec, dec.
 - intros; simpl.
   rewrite Automata.pow_spec, Automata.proj_spec; split.
-  + (* Given a word for φ, determine a witness. *)
-    intros [v [H1 H2]]. apply spec in H2.
+  + (* Given a word for φ, compute the witness. *)
+    intros [v [Himage Hv]]. apply spec in Hv.
     exists (decode (map Vector.hd v)).
-    replace (_ :: vctx w) with (vctx v). easy. clear H2.
+    replace (_ :: vctx w) with (vctx v). easy. clear Hv.
+    (* Reduce to: map vtl v = w. *)
     unfold vctx; rewrite transpose_cons; simpl.
-    rewrite vlist_cons, <-map_vlist.
-    rewrite Vector.to_list_of_list_opp; apply wd, wd, wd.
-    (* apply Forall2_map with (f:=f) in H1. induction H1; simpl. easy.
-    rewrite IHForall2. destruct H as [R|[R|]]; subst; easy. *)
-    admit.
-  + (* Given a witness, find a word for φ. *)
+    rewrite vlist_cons, <-map_vlist, vlist_voflist_id.
+    apply wd, wd, wd; apply transpose_convert.
+    rewrite <-map_vlist, ?vlist_voflist_id.
+    (* Prove using induction over Himage. *)
+    apply Forall2_map with (f:=f) in Himage.
+    induction Himage; simpl. easy. rewrite IHHimage.
+    destruct H as [R|[R|]]; subst; easy.
+  + (* Given a witness, construct a word for φ. *)
     intros [x Hx].
-    (* Check encode x ;; transpose w. *)
+    pose(xw  := encode x).
+    pose(xw' := xw ++ repeat false (length w)).
+    pose(w'  := w ++ repeat (vrepeat false n) (length xw)).
+    exists (map2 (λ h t, h ;; t) xw' w'); split.
+    * (* The word is in the image. *)
+      admit.
+    * (* This is an accepting word. *)
+      apply spec.
 Admitted.
 
 Theorem construct_Regular_wff φ :
@@ -153,14 +166,11 @@ Qed.
 Lemma determine_context_word Γ :
   ∃w : list (vec (length Γ)), vctx w = Γ.
 Proof.
-(*
 pose(max_length (mat : list (list bool)) := lmax (map (@length _) mat)).
-pose(cast_matrix n mat := map (cast false n) mat).
-pose(dat := map encode Γ);
-pose(mat := transpose (cast_matrix (max_length dat) dat));
-pose(wrd := cast_matrix (length Γ) (Vector.to_list mat));
-exists wrd.
-*)
+pose(encoded := vmap encode (voflist Γ)).
+pose(depth   := lmax (map (@length _) (vlist encoded))).
+pose(matrix  := vmap (cast false depth) encoded).
+exists (vlist (transpose matrix)).
 Admitted.
 
 Theorem Realizes_dec φ :
