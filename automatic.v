@@ -39,7 +39,7 @@ Hypothesis decode_padding : ∀l n, decode l = decode (l ++ repeat false n).
 Hypothesis decode_encode_id : ∀x, decode (encode x) = x.
 
 Variable default : domain.
-Hypothesis default_spec : ∀a Γ, Model Γ a <-> Model (Γ ++ [default]) a.
+Hypothesis default_spec : ∀a Γ, Model a Γ <-> Model a (Γ ++ [default]).
 
 Definition vctx {n} (w : list (vec n)) : list domain :=
   vlist (vmap decode (vmap vlist (transpose (voflist w)))).
@@ -107,15 +107,15 @@ eapply Regular.
   + (* Given a word for φ, compute the witness. *)
     intros [v [Himage Hv]]. apply spec in Hv.
     exists (decode (map Vector.hd v)).
-    replace (_ :: vctx w) with (vctx v). easy. clear Hv.
+    erewrite wd. apply Hv. clear Hv.
     (* Reduce to: map vtl v = w. *)
     unfold vctx; rewrite transpose_cons; simpl.
-    rewrite vlist_cons, <-map_vlist, vlist_voflist_id.
+    rewrite vlist_cons, <-map_vlist with (f:=vhd), vlist_voflist_id.
     apply wd, wd, wd; apply transpose_convert.
     rewrite <-map_vlist, ?vlist_voflist_id.
     (* Prove using induction over Himage. *)
     apply Forall2_map with (f:=f) in Himage.
-    induction Himage; simpl. easy. rewrite IHHimage.
+    induction Himage; simpl. easy. rewrite <-IHHimage.
     destruct H as [R|[R|]]; subst; easy.
   + (* Given a witness, construct a word for φ. *)
     intros [x Hx].
@@ -126,7 +126,7 @@ eapply Regular.
     * (* The word is in the image. *)
       admit.
     * (* This is an accepting word. *)
-      apply spec.
+      apply spec. erewrite wd. apply Hx.
 Admitted.
 
 Theorem construct_Regular_wff φ :

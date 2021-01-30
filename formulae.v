@@ -22,17 +22,17 @@ Inductive wff :=
   | wff_ex (φ : wff).
 
 Variable domain : Type.
-Variable Model : list domain -> atom -> Prop.
+Variable Model : atom -> list domain -> Prop.
 
-Fixpoint Realizes (Γ : list domain) (f : wff) :=
+Fixpoint Realizes (f : wff) (Γ : list domain) :=
   match f with
-  | wff_atom a  => Model Γ a
-  | wff_not φ   => ¬Realizes Γ φ
-  | wff_and φ ϕ => Realizes Γ φ /\ Realizes Γ ϕ
-  | wff_ex φ    => ∃x, Realizes (x :: Γ) φ
+  | wff_atom a  => Model a Γ
+  | wff_not φ   => ¬Realizes φ Γ
+  | wff_and φ ϕ => Realizes φ Γ /\ Realizes ϕ Γ
+  | wff_ex φ    => ∃x, Realizes φ (x :: Γ)
   end.
 
-Definition Use φ n := ∀Γ, Realizes Γ φ <-> Realizes (firstn n Γ) φ.
+Definition Use φ n := ∀Γ, Realizes φ Γ <-> Realizes φ (firstn n Γ).
 
 Section Facts_about_usage.
 
@@ -75,14 +75,14 @@ Arguments wff_ex {_}.
 Arguments Realizes {_ _}.
 Arguments Use {_ _}.
 
-Notation model atom domain := (list domain -> atom -> Prop).
+Notation model atom domain := (atom -> list domain -> Prop).
 Notation "¬` φ"            := (wff_not φ)
                               (right associativity, at level 30, format "¬` φ").
 Notation "φ ∧` ϕ"          := (wff_and φ ϕ)
                               (right associativity, at level 35).
 Notation "∃[ φ ]"          := (wff_ex φ)
                               (format "∃[ φ ]").
-Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
+Notation "A |= ( φ )[ Γ ]" := (Realizes A φ Γ)
                               (at level 20, format "A  |=  ( φ )[ Γ ]").
 
 Section Facts_about_realization.
@@ -121,7 +121,7 @@ Variable f : domA -> domB.
 Hypothesis f_surj : ∀y, ∃x, f x = y.
 
 Theorem similar_models :
-  (∀a Γ, A Γ a <-> B (map f Γ) a) ->
+  (∀a Γ, A a Γ <-> B a (map f Γ)) ->
   ∀φ Γ, A |= (φ)[Γ] <-> B |= (φ)[map f Γ].
 Proof.
 intros eqv; induction φ; simpl; intros.
@@ -174,21 +174,21 @@ Coercion rformula_atom : rel_atom >-> rformula.
 (* Standard models of linear arithmetic. *)
 Section Standard_models_of_linear_arithmetic.
 
-Fixpoint eval (Γ : list nat) (x : la_term) :=
+Fixpoint eval (x : la_term) (Γ : list nat) :=
   match x with
   | la_zero    => 0
   | la_one     => 1
   | la_var i   => nth i Γ 0
-  | la_add x y => eval Γ x + eval Γ y
+  | la_add x y => eval x Γ + eval y Γ
   end.
 
-Definition Nat (Γ : list nat) (a : la_atom) :=
+Definition Nat (a : la_atom) (Γ : list nat) :=
   match a with
-  | la_eq x y => eval Γ x = eval Γ y
-  | la_le x y => eval Γ x ≤ eval Γ y
+  | la_eq x y => eval x Γ = eval y Γ
+  | la_le x y => eval x Γ ≤ eval y Γ
   end.
 
-Definition NatR (Γ : list nat) (a : rel_atom) :=
+Definition NatR (a : rel_atom) (Γ : list nat) :=
   let f := λ i, nth i Γ 0 in
   match a with
   | rel_zero i    => f i = 0
@@ -215,7 +215,7 @@ Notation "# i" := (la_var i) (at level 9, format "# i").
 Notation "x << n" := (shift_vars n x) (at level 10, format "x << n").
 
 Theorem eval_shift_vars x Γ n :
-  eval Γ (x<<n) = eval (skipn n Γ) x.
+  eval (x<<n) Γ = eval x (skipn n Γ).
 Proof.
 induction x; simpl. 1,2: easy.
 - revert Γ; induction n; simpl; intros.
@@ -234,7 +234,7 @@ revert j n; induction x; intros.
   destruct (IHx2 1 (2 + n)) as [ϕ2 Hϕ2].
   exists ∃[∃[rel_add 0 1 (2 + j) ∧` ϕ1 ∧` ϕ2]].
   simpl in *; split.
-  + intros H. exists (eval Γ (x2<<n)), (eval Γ (x1<<n)).
+  + intros H. exists (eval (x2<<n) Γ), (eval (x1<<n) Γ).
     repeat split. easy.
     * apply Hϕ1; simpl. now rewrite ?eval_shift_vars.
     * apply Hϕ2; simpl. now rewrite ?eval_shift_vars.
@@ -249,7 +249,7 @@ Lemma reduce_la_eq x y Γ :
   Nat |= (∃[la_eq #0 (x<<1) ∧` la_eq #0 (y<<1)])[Γ].
 Proof.
 split; simpl.
-- intros H. exists (eval Γ x).
+- intros H. exists (eval x Γ).
   split; now rewrite eval_shift_vars.
 - intros [n [H1 H2]].
   rewrite eval_shift_vars in H1;
@@ -262,7 +262,7 @@ Lemma reduce_la_le x y Γ :
   Nat |= (∃[∃[la_le #0 #1 ∧` la_eq #0 (x<<2) ∧` la_eq #1 (y<<2)]])[Γ].
 Proof.
 split; simpl.
-- intros H; exists (eval Γ y), (eval Γ x); repeat split.
+- intros H; exists (eval y Γ), (eval x Γ); repeat split.
   easy. all: now rewrite eval_shift_vars.
 - intros [n2 [n1 [H [H1 H2]]]].
   rewrite eval_shift_vars in H1;

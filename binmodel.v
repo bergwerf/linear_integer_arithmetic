@@ -8,7 +8,7 @@ From larith Require Import formulae automata regular automatic.
 Import ListNotations.
 
 (* A binary model for the relational language of linear integer arithmetic. *)
-Definition BinR (Γ : list N) (a : rel_atom) :=
+Definition BinR (a : rel_atom) (Γ : list N) :=
   (let f := λ i, nth i Γ 0 in
   match a with
   | rel_zero i    => f i = 0
@@ -200,7 +200,8 @@ simpl; now rewrite N.add_0_r.
 Qed.
 
 Lemma regular_rel_zero i :
-  regular (λ w : list (vec (S i)), BinR (ctx w) (rel_zero i)).
+  regular (λ w : list (vec (S i)),
+    BinR (rel_zero i) (ctx w)).
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_zero); intros.
@@ -214,7 +215,8 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 Qed.
 
 Lemma regular_rel_one i :
-  regular (λ w : list (vec (S i)), BinR (ctx w) (rel_one i)).
+  regular (λ w : list (vec (S i)),
+    BinR (rel_one i) (ctx w)).
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_one); intros.
@@ -228,7 +230,8 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 Qed.
 
 Lemma regular_rel_eq i j :
-  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (rel_eq i j)).
+  regular (λ w : list (vec (1 + max i j)),
+    BinR (rel_eq i j) (ctx w)).
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
@@ -245,7 +248,8 @@ eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
 Qed.
 
 Lemma regular_rel_le i j :
-  regular (λ w : list (vec (1 + max i j)), BinR (ctx w) (rel_le i j)).
+  regular (λ w : list (vec (1 + max i j)),
+    BinR (rel_le i j) (ctx w)).
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
@@ -261,7 +265,8 @@ eapply Regular with (r_automaton:=dfa_le).
 Qed.
 
 Lemma regular_rel_add i j k :
-  regular (λ w : list (vec (1 + max (max i j) k)), BinR (ctx w) (rel_add i j k)).
+  regular (λ w : list (vec (1 + max (max i j) k)),
+    BinR (rel_add i j k) (ctx w)).
 Proof.
 remember (max (max i j) k) as n.
 pose(f (c : vec (S n)) :=
