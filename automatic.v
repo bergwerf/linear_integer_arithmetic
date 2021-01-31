@@ -35,8 +35,8 @@ Variable Model : model atom domain.
 
 Variable decode : list bool -> domain.
 Variable encode : domain -> list bool.
-Hypothesis decode_padding : ∀l n, decode l = decode (l ++ repeat false n).
 Hypothesis decode_encode_id : ∀x, decode (encode x) = x.
+Hypothesis decode_padding : ∀l n, decode (l ++ repeat false n) = decode l.
 
 Variable default : domain.
 Hypothesis default_spec : ∀a Γ, Model a Γ <-> Model a (Γ ++ [default]).
