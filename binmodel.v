@@ -254,7 +254,7 @@ Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
 eapply regular_proj with (f0:=f).
-eapply Regular with (r_automaton:=dfa_le).
+eapply Regular with (r_dfa:=dfa_le).
 - easy.
 - apply finite_type, finite_bool.
 - apply bool_dec.

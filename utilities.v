@@ -79,14 +79,10 @@ Section Predicates.
 Variable X : Type.
 Variable P Q : X -> Prop.
 
-Theorem dec_replace :
-  (∀x, P x <-> Q x) ->
-  {∃x, P x} + {∀x, ¬P x} ->
-  {∃x, Q x} + {∀x, ¬Q x}.
+Theorem ex_iff :
+  (∀x, P x <-> Q x) -> (∃x, P x) <-> (∃x, Q x).
 Proof.
-intros H [H'|H']; [left|right].
-- destruct H'; exists x; apply H, H0.
-- intros; eapply contra. apply H. apply H'.
+intros H; split; intros [x Hx]; exists x; apply H, Hx.
 Qed.
 
 End Predicates.

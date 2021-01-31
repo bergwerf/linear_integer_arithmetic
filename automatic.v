@@ -122,11 +122,17 @@ eapply Regular.
     pose(xw  := encode x).
     pose(xw' := xw ++ repeat false (length w)).
     pose(w'  := w ++ repeat (vrepeat false n) (length xw)).
-    exists (map2 (λ h t, h ;; t) xw' w'); split.
-    * (* The word is in the image. *)
-      admit.
-    * (* This is an accepting word. *)
-      apply spec. erewrite wd. apply Hx.
+    exists (map2 (λ h t, h ;; t) xw' w').
+    (* Now we run into a problem! *)
+    (*
+    The current chain of definitions requires us to give an accepting word of
+    length w. But it is possible that the witness is longer than any of the
+    other context variables, in which case the word needs additional padding.
+    I looked through various publications to find a solution for this problem,
+    but most of them don't go into detail regarding the construction. However,
+    it seems that a course at EPFL from 2008 deals with precisely this issue:
+    https://lara.epfl.ch/w/sav08/using_automata_to_decide_ws1s
+    *)
 Admitted.
 
 Theorem construct_Regular_wff φ :

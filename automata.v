@@ -144,9 +144,9 @@ revert s t; induction word as [|c w]; simpl; intros.
 Qed.
 
 Corollary prod_spec word :
-  Language A word /\ Language B word <-> Language prod word. 
+  Language prod word <-> Language A word /\ Language B word. 
 Proof.
-apply prod_Accepts.
+symmetry; apply prod_Accepts.
 Qed.
 
 Theorem prod_det :
@@ -357,7 +357,7 @@ Qed.
 
 End Complementation.
 
-(* A language using a different alphabet can be decided using a projection. *)
+(* Change the alphabet using a projection. *)
 Section Projection.
 
 Variable A : automaton letter.
