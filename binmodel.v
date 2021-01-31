@@ -290,8 +290,8 @@ revert i n; induction l; destruct n, i; simpl; try easy.
 intros H; apply IHl; lia.
 Qed.
 
-Theorem Regular_wff_rel_atom (a : rel_atom) :
-  Regular_wff BinR bnum (wff_atom a).
+Theorem Automatic_rel_atom (a : rel_atom) :
+  Automatic BinR bnum (wff_atom a).
 Proof.
 destruct a;
 [ exists (1 + i)

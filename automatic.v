@@ -44,7 +44,7 @@ Hypothesis default_spec : ∀a Γ, Model a Γ <-> Model a (Γ ++ [default]).
 Definition vctx {n} (w : list (vec n)) : list domain :=
   vlist (vmap decode (vmap vlist (transpose (voflist w)))).
 
-Definition Regular_wff φ := Σ n, Use Model φ n ×
+Definition Automatic φ := Σ n, Use Model φ n ×
   regular (λ w : list (vec n), Model |= (φ)[vctx w]).
 
 Section Lemmas.
@@ -135,13 +135,13 @@ eapply Regular.
     *)
 Admitted.
 
-Theorem construct_Regular_wff φ :
-  (∀a, Regular_wff (wff_atom a)) -> Regular_wff φ.
+Theorem automatic_structure φ :
+  (∀a, Automatic (wff_atom a)) -> Automatic φ.
 Proof.
-intros regular_atoms.
+intros automatic_atoms.
 induction φ; simpl.
 - (* Atomic formulae: regular by assumption. *)
-  apply regular_atoms.
+  apply automatic_atoms.
 - (* Negation: flip accept states. *)
   destruct IHφ as [n [use reg]]; exists n; split.
   apply Use_not, use. apply regular_negation, reg.
@@ -169,18 +169,17 @@ induction φ; simpl.
     apply regular_ex, reg.
 Qed.
 
-Lemma determine_context_word Γ :
+Theorem vctx_surj Γ :
   ∃w : list (vec (length Γ)), vctx w = Γ.
 Proof.
-pose(max_length (mat : list (list bool)) := lmax (map (@length _) mat)).
-pose(encoded := vmap encode (voflist Γ)).
-pose(depth   := lmax (map (@length _) (vlist encoded))).
-pose(matrix  := vmap (cast false depth) encoded).
+pose(binary := vmap encode (voflist Γ)).
+pose(maxlen := lmax (map (@length _) (vlist binary))).
+pose(matrix := vmap (cast false maxlen) binary).
 exists (vlist (transpose matrix)).
 Admitted.
 
-Theorem Realizes_dec φ :
-  Regular_wff φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.
+Theorem Automatic_Realizes_dec φ :
+  Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.
 Proof.
 intros [n [use reg]].
 apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
@@ -193,7 +192,7 @@ apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
   apply Realizes_ctx_repeat_default with (n:=n), use in HΓ.
   remember (firstn n (Γ ++ repeat default n)) as Δ.
   (* Now determine a context word and apply a contradiction. *)
-  destruct determine_context_word with (Γ:=Δ) as [w Hw].
+  destruct vctx_surj with (Γ:=Δ) as [w Hw].
   replace n with (length Δ) in No.
   + rewrite <-Hw in HΓ; apply No in HΓ; easy.
   + subst; apply firstn_length_le. rewrite app_length, repeat_length. lia.
@@ -201,4 +200,4 @@ Qed.
 
 End Decide_wff_using_automata.
 
-Arguments Regular_wff {_ _}.
+Arguments Automatic {_ _}.
