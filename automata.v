@@ -419,11 +419,55 @@ Qed.
 
 End Projection.
 
-(* Remove a dynamic suffix by adding 'early accept' states. *)
+(* Remove a suffix of padding-symbols by adding 'early accept' states. *)
 Section Retraction.
 
 Variable A : automaton letter.
-Variable suffix : letter -> bool.
+Variable p : letter.
+
+Fixpoint retr_accept (n : nat) : state A -> bool :=
+  match n with
+  | 0 => accept A
+  | S m => λ s, existsb (retr_accept m) (trans A p s)
+  end.
+
+Variable size : nat.
+Hypothesis finite : Finite A size.
+
+Definition retr := Automaton _ _ (start A) (retr_accept size) (trans A).
+
+Theorem retr_accept_spec s :
+  existsb (retr_accept size) s = true <-> ∃n, Accepts A (repeat p n) s.
+Proof.
+Admitted.
+
+Corollary retr_Accepts word s :
+  Accepts retr word s <-> ∃n, Accepts A (word ++ repeat p n) s.
+Proof.
+revert s; induction word as [|c w]; simpl; intros.
+apply retr_accept_spec. apply IHw.
+Qed.
+
+Corollary retr_spec word :
+  Language retr word <-> ∃n, Language A (word ++ repeat p n).
+Proof.
+apply retr_Accepts.
+Qed.
+
+Theorem retr_det :
+  Deterministic A -> Deterministic retr.
+Proof.
+easy.
+Qed.
+
+Theorem retr_size n :
+  Finite A n -> Finite retr n.
+Proof.
+intros [Q [Q_len can]]; exists Q; split. easy.
+intros s; destruct (can s) as [t [inQ sim]]; exists t; split. easy.
+unfold Similar in *; intros. rewrite ?retr_Accepts; apply ex_iff.
+intros; apply sim.
+Qed.
 
 End Retraction.
 
