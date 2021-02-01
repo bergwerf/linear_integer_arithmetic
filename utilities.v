@@ -76,13 +76,21 @@ End Propositions.
 
 Section Predicates.
 
-Variable X : Type.
+Variable X Y : Type.
 Variable P Q : X -> Prop.
+Variable R : X -> Y -> Prop.
 
 Theorem ex_iff :
   (∀x, P x <-> Q x) -> (∃x, P x) <-> (∃x, Q x).
 Proof.
 intros H; split; intros [x Hx]; exists x; apply H, Hx.
+Qed.
+
+Theorem sigma_function :
+  (∀x, Σ y, R x y) -> Σ f : X -> Y, ∀x, R x (f x).
+Proof.
+intros H; exists (λ x, projT1 (H x)).
+intros; destruct (H x); easy.
 Qed.
 
 End Predicates.

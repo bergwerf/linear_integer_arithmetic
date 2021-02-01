@@ -419,7 +419,7 @@ Qed.
 
 End Projection.
 
-(* Remove a suffix of padding-symbols by adding 'early accept' states. *)
+(* Remove a suffix of padding-symbols using 'early accept' states. *)
 Section Retraction.
 
 Variable A : automaton letter.
@@ -431,21 +431,38 @@ Fixpoint retr_accept (n : nat) : state A -> bool :=
   | S m => λ s, existsb (retr_accept m) (trans A p s)
   end.
 
+(* Define early accept states using graph connectivity. *)
+Section Early_accept_states.
+
+Variable Q : list (state A).
+Variable can : state A -> state A.
+Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
+
+Definition fixed_adj s := map can (trans A p s).
+Definition Early_accept := Connected fixed_adj (λ s, accept A s = true).
+
+Theorem retr_accept_spec s :
+  existsb (retr_accept (length Q)) s = true <-> ∃n, Accepts A (repeat p n) s.
+Proof.
+transitivity (Exists (Early_accept Q) s).
+Admitted.
+
+End Early_accept_states.
+
 Variable size : nat.
 Hypothesis finite : Finite A size.
 
 Definition retr := Automaton _ _ (start A) (retr_accept size) (trans A).
 
-Theorem retr_accept_spec s :
-  existsb (retr_accept size) s = true <-> ∃n, Accepts A (repeat p n) s.
-Proof.
-Admitted.
-
-Corollary retr_Accepts word s :
+Theorem retr_Accepts word s :
   Accepts retr word s <-> ∃n, Accepts A (word ++ repeat p n) s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
-apply retr_accept_spec. apply IHw.
+- destruct finite as [Q [Q_len Hcan]].
+  apply sigma_function in Hcan as [can can_spec].
+  rewrite <-Q_len, retr_accept_spec with (can:=can).
+  easy. apply can_spec.
+- apply IHw.
 Qed.
 
 Corollary retr_spec word :
@@ -460,10 +477,10 @@ Proof.
 easy.
 Qed.
 
-Theorem retr_size n :
-  Finite A n -> Finite retr n.
+Theorem retr_size :
+  Finite retr size.
 Proof.
-intros [Q [Q_len can]]; exists Q; split. easy.
+destruct finite as [Q [Q_len can]]; exists Q; split. easy.
 intros s; destruct (can s) as [t [inQ sim]]; exists t; split. easy.
 unfold Similar in *; intros. rewrite ?retr_Accepts; apply ex_iff.
 intros; apply sim.
@@ -479,8 +496,6 @@ End Automata.
 (* The automaton must have a finite number of states. *)
 Section Decidability.
 
-(* Show that connectivity in a graph is decidable. *)
-
 Variable letter : Set.
 Variable alphabet : list letter.
 Hypothesis full_alphabet : ∀c, In c alphabet.
@@ -489,49 +504,49 @@ Variable A : automaton letter.
 Hypothesis state_dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
 (* Reduce finding an accepting word to connectivity to an accept state. *)
-Section Accepting_path.
- 
+Section Connectivity_to_an_accept_state.
+
 Variable Q : list (state A).
 Variable can : state A -> state A.
 Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
 
-Definition Automaton_adj s := map can (flat_map (λ c, trans A c s) alphabet).
-Definition Accepting_path := Path Automaton_adj (λ s, accept A s = true) Q.
+Definition trans_adj s := map can (flat_map (λ c, trans A c s) alphabet).
+Definition Acceptable := Connected trans_adj (λ s, accept A s = true) Q.
 
-Theorem Accepting_path_Accepts s :
-  Accepting_path s -> ∃w, Accepts A w [s].
+Theorem Acceptable_Accepts s :
+  Acceptable s -> ∃w, Accepts A w [s].
 Proof.
-intros path; induction path.
-- exists nil; simpl; now rewrite H.
-- apply in_map_iff in H0 as [s [R Hs]]; subst.
+intros [p]; induction p.
+- exists nil; simpl; now rewrite t.
+- apply in_map_iff in i0 as [s [R Hs]]; subst.
   apply in_flat_map in Hs as [c [_ Hc]].
-  destruct IHpath as [w Hw].
+  destruct IHp as [w Hw].
   exists (c :: w); simpl; rewrite app_nil_r.
   eapply Accepts_subset. apply can_spec, Hw.
   intros s' Hs'; inv Hs'.
 Qed.
 
-Theorem Accepts_Accepting_path s w :
-  Accepts A w [s] -> Accepting_path s.
+Theorem Accepts_Acceptable s w :
+  Accepts A w [s] -> Acceptable s.
 Proof.
 revert s; induction w as [|c w]; simpl; intros.
-- rewrite orb_false_r in H. now apply Path_finish.
+- rewrite orb_false_r in H. now apply conn, path_stop.
 - rewrite app_nil_r in H.
   apply Accepts_determine in H as [t [Ht Hw]].
-  apply can_spec, IHw in Hw.
-  apply Path_step with (w:=can t). apply can_spec.
+  apply can_spec, IHw in Hw as [p].
+  apply conn, path_step with (w:=can t). apply can_spec.
   apply in_map_iff; exists t; split. easy.
   apply in_flat_map; exists c; easy. easy.
 Qed.
 
-Corollary Accepting_path_dec s :
-  {Accepting_path s} + {¬Accepting_path s}.
+Corollary Acceptable_dec s :
+  {Acceptable s} + {¬Acceptable s}.
 Proof.
-apply Path_dec. apply state_dec.
+apply Connected_dec. apply state_dec.
 intros v; destruct (accept A v); auto.
 Qed.
 
-End Accepting_path.
+End Connectivity_to_an_accept_state.
 
 Variable size : nat.
 Hypothesis A_size : Finite A size.
@@ -539,15 +554,13 @@ Hypothesis A_size : Finite A size.
 Corollary ex_Accepts_dec s :
   {∃w, Accepts A w [s]} + {∀w, ¬Accepts A w [s]}.
 Proof.
-destruct A_size as [Q [Q_len can]].
-pose(can_f s := projT1 (can s)).
-assert(can_f_spec : ∀t, In (can_f t) Q /\ Similar A [t] [can_f t]). {
-  intros; unfold can_f; destruct (can t); easy. }
-destruct (Accepting_path_dec Q can_f s).
-- left. eapply Accepting_path_Accepts.
-  apply can_f_spec. easy.
+destruct A_size as [Q [Q_len Hcan]].
+apply sigma_function in Hcan as [can can_spec].
+destruct (Acceptable_dec Q can s).
+- left. eapply Acceptable_Accepts.
+  apply can_spec. easy.
 - right; intros w. eapply contra.
-  apply Accepts_Accepting_path, can_f_spec. easy.
+  apply Accepts_Acceptable, can_spec. easy.
 Qed.
 
 Corollary Language_inhabited_dec :
