@@ -5,9 +5,10 @@ notations.v
 utilities.v
 vector.v
 binary.v
+path.v
 
-formulae.v
 automata.v
+formulae.v
 regular.v
 automatic.v
 binmodel.v

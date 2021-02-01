@@ -97,10 +97,10 @@ Lemma regular_ex φ n :
   regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
 Proof.
 intros [A det size fin dec spec].
-pose(f (v : vec n) := [true ;; v; false ;; v]).
+pose(pr (v : vec n) := [true ;; v; false ;; v]).
 eapply Regular.
 - apply Automata.pow_det.
-- apply Automata.pow_size, Automata.proj_size with (f:=f), fin. apply dec.
+- apply Automata.pow_size, Automata.proj_size with (pr:=pr), fin. apply dec.
 - simpl; apply list_eq_dec, dec.
 - intros; simpl.
   rewrite Automata.pow_spec, Automata.proj_spec; split.
@@ -114,7 +114,7 @@ eapply Regular.
     apply wd, wd, wd; apply transpose_convert.
     rewrite <-map_vlist, ?vlist_voflist_id.
     (* Prove using induction over Himage. *)
-    apply Forall2_map with (f:=f) in Himage.
+    apply Forall2_map with (f:=pr) in Himage.
     induction Himage; simpl. easy. rewrite <-IHHimage.
     destruct H as [R|[R|]]; subst; easy.
   + (* Given a witness, construct a word for φ. *)

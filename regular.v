@@ -52,11 +52,11 @@ intros; rewrite <-H; apply spec.
 Qed.
 
 (* Change the domain alphabet. *)
-Theorem regular_proj {letter letter' : Set} P Q (f : letter' -> letter) :
-  regular P -> (∀w, P (map f w) <-> Q w) -> regular Q.
+Theorem regular_proj {letter letter' : Set} P Q (pr : letter' -> letter) :
+  regular P -> (∀w, P (map pr w) <-> Q w) -> regular Q.
 Proof.
 intros [A det size fin dec spec] H.
-pose(B := Automata.proj _ A _ (λ c, [f c])).
+pose(B := Automata.proj _ A _ (λ c, [pr c])).
 eapply Regular with (r_dfa:=B).
 - apply Automata.proj_det; easy.
 - apply Automata.proj_size, fin.
@@ -65,7 +65,7 @@ eapply Regular with (r_dfa:=B).
   unfold B; rewrite Automata.proj_spec.
   unfold Automata.Image; rewrite map_map_singleton. split.
   + intros [v [H1 H2]]. apply Forall2_In_singleton in H1; congruence.
-  + intros Hfw; exists (map f w); split.
+  + intros Hfw; exists (map pr w); split.
     now apply Forall2_In_singleton. easy.
 Qed.
 

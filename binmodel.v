@@ -235,7 +235,7 @@ Lemma regular_rel_eq i j :
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
-eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
+eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_eq); intros.
   simpl; destruct c as [[] []], s; simpl; lia.
 - apply Automata.opt_size, finite_type, finite_unit.
@@ -253,7 +253,7 @@ Lemma regular_rel_le i j :
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
-eapply regular_proj with (f0:=f).
+eapply regular_proj with (pr:=f).
 eapply Regular with (r_dfa:=dfa_le).
 - easy.
 - apply finite_type, finite_bool.
@@ -271,7 +271,7 @@ Proof.
 remember (max (max i j) k) as n.
 pose(f (c : vec (S n)) :=
   ((vnth c (fin n i), vnth c (fin n j)), vnth c (fin n k))).
-eapply regular_ext. eapply regular_proj with (f0:=f). eapply Regular.
+eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_add); intros.
   simpl; destruct c as [[[] []] []], s; simpl; lia.
 - apply Automata.opt_size, finite_type, finite_bool.
