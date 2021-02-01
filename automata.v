@@ -101,8 +101,7 @@ Section Constructions.
 
 Variable letter : Set.
 
-(* Regular languages are closed under taking intersections. *)
-(* Two automatons are simulated simultaneously. *)
+(* Track two automata at once to decide the complement of two languages. *)
 Section Product.
 
 Variable A B : automaton letter.
@@ -174,7 +173,7 @@ Qed.
 
 End Product.
 
-(* Automata can be made deterministic. *)
+(* Make a deteministic automaton by tracking all reachable states. *)
 Section Powerset.
 
 Variable A : automaton letter.
@@ -316,7 +315,7 @@ Qed.
 
 End Option.
 
-(* Regular languages are closed under complementation. *)
+(* Accept the complement of a language by inverting the accept states. *)
 Section Complementation.
 
 Variable A : automaton letter.
@@ -357,18 +356,18 @@ Qed.
 
 End Complementation.
 
-(* Change the alphabet using a projection. *)
+(* Change the alphabet using a projection function. *)
 Section Projection.
 
 Variable A : automaton letter.
 Variable new_letter : Set.
-Variable f : new_letter -> list letter.
+Variable pr : new_letter -> list letter.
 
-Definition proj_trans i s := flat_map (λ c, trans A c s) (f i).
+Definition proj_trans i s := flat_map (λ c, trans A c s) (pr i).
 Definition proj := Automaton new_letter _ (start A) (accept A) proj_trans.
 
 (* The image of a word in the original automaton A. *)
-Definition Image word image := Forall2 (@In letter) image (map f word).
+Definition Image word image := Forall2 (@In letter) image (map pr word).
 
 Theorem proj_Accepts word s :
   Accepts proj word s <-> ∃v, Image word v /\ Accepts A v s.
@@ -401,7 +400,7 @@ intros; apply proj_Accepts.
 Qed.
 
 Theorem proj_det :
-  Deterministic A -> (∀c, length (f c) = 1) -> Deterministic proj.
+  Deterministic A -> (∀c, length (pr c) = 1) -> Deterministic proj.
 Proof.
 intros det Hc c s. simpl; unfold proj_trans.
 destruct (list_singleton _ (Hc c));
@@ -419,6 +418,14 @@ all: split; [easy|apply Hcan, H].
 Qed.
 
 End Projection.
+
+(* Remove a dynamic suffix by adding 'early accept' states. *)
+Section Retraction.
+
+Variable A : automaton letter.
+Variable suffix : letter -> bool.
+
+End Retraction.
 
 End Constructions.
 
