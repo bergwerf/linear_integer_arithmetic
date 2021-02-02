@@ -441,17 +441,18 @@ Variable Q : list (state A).
 Variable can : state A -> state A.
 Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
 
-Definition fixed_adj s := map can (trans A p s).
-Definition Early_accept := Connected fixed_adj (λ s, accept A s = true).
+Definition suffix_adj s := map can (trans A p s).
+Definition Early_accept := Connected suffix_adj (λ s, accept A s = true) Q.
+Notation suffix_path := (path suffix_adj (λ s, accept A s = true) Q).
 
 Theorem Early_accept_complete s n :
-  Accepts A (repeat p n) [s] -> Early_accept Q s.
+  Accepts A (repeat p n) [s] -> Early_accept s.
 Proof.
 revert s; induction n; simpl; intros.
 - rewrite orb_false_r in H; apply conn, path_stop, H.
 - rewrite app_nil_r in H; apply Accepts_determine in H as [t [Hs Ht]].
-  apply can_spec, IHn in Ht as [pad]. apply conn, path_step with (w:=can t).
-  apply can_spec. apply in_map, Hs. apply pad.
+  apply can_spec, IHn in Ht as [path]. apply conn, path_step with (w:=can t).
+  apply can_spec. apply in_map, Hs. apply path.
 Qed.
 
 Theorem retr_accept_sound n s :
@@ -464,27 +465,44 @@ revert s; induction n; simpl; intros. easy. b_Prop.
   rewrite app_nil_r; apply Accepts_determine; exists t; easy.
 Qed.
 
-Theorem retr_accept_complete s :
-  Early_accept Q s -> retr_accept (length Q) s = true.
+Theorem retr_accept_complete s (path : suffix_path s) :
+  retr_accept (1 + path_length path) s = true.
 Proof.
+induction path; simpl; b_Prop.
+now left. right; apply existsb_exists.
+apply in_map_iff in i0 as [t [R H]]; subst; exists t; split. easy.
+simpl in IHpath; b_Prop; [left|right].
+(* Again, can/Similar is too permissive to finish this proof. *)
 Admitted.
 
-Corollary retr_accept_spec s :
-  existsb (retr_accept (length Q)) s = true <-> ∃n, Accepts A (repeat p n) s.
+Lemma retr_accept_weaken m n s :
+  retr_accept m s = true -> m <= n -> retr_accept n s = true.
+Proof.
+revert n s; induction m; simpl; intros.
+easy. destruct n; simpl. easy. b_Prop. now left. right.
+apply existsb_exists in e as [t H]; apply existsb_exists; exists t.
+split. easy. apply IHm. easy. lia.
+Qed.
+
+Theorem retr_accept_spec s :
+  existsb (retr_accept (1 + length Q)) s = true <->
+  ∃n, Accepts A (repeat p n) s.
 Proof.
 rewrite existsb_exists; split; intros [i H].
 - destruct H as [Hs Hi]. apply retr_accept_sound in Hi as [n Hn]; exists n.
   apply Accepts_determine; exists i; easy.
-- apply Accepts_determine in H as [t H]; exists t; split. easy.
-  eapply retr_accept_complete, Early_accept_complete, H.
-Qed.
+- apply Accepts_determine in H as [t [Hs Ht]]; exists t; split. easy.
+  apply Early_accept_complete in Ht as [path].
+  apply short_path in path as [spath H].
+  eapply retr_accept_weaken. apply retr_accept_complete. apply le_n_S, H.
+Admitted.
 
 End Early_accept_states.
 
 Variable size : nat.
 Hypothesis finite : Finite A size.
 
-Definition retr := Automaton _ _ (start A) (retr_accept size) (trans A).
+Definition retr := Automaton _ _ (start A) (retr_accept (S size)) (trans A).
 
 Theorem retr_Accepts word s :
   Accepts retr word s <-> ∃n, Accepts A (word ++ repeat p n) s.
