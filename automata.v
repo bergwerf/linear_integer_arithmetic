@@ -33,13 +33,8 @@ Definition Language word := Accepts word [start A].
 (* An automaton is deterministic if every transition goes to 1 state. *)
 Definition Deterministic := ∀c s, length (trans A c s) = 1.
 
-(* A state automorphism. *)
-Definition Automorphism f := ∀s, accept A s = accept A (f s) /\
-  ∀c t, In (f t) (map f (trans A c s)) <-> In (f t) (map f (trans A c (f s))).
-
-(* A finite automaton has an automorphism with a finite domain. *)
-Notation Range f r := (∀x, In (f x) r).
-Definition Finite n := Σ f Q, length Q = n /\ Range f Q /\ Automorphism f.
+(* A finite state space can be given as a list. *)
+Definition Finite n := Σ Q, length Q = n /\ ∀s : state A, In s Q.
 
 Theorem not_Accepts_nil w :
   ¬Accepts w [].
@@ -55,16 +50,20 @@ apply bool_dec. apply IHw.
 Qed.
 
 Theorem Accepts_subset w s1 s2 :
-  Accepts w s1 -> (∀s, In s s1 -> In s s2) -> Accepts w s2.
+  (∀s, In s s1 -> In s s2) -> Accepts w s1 -> Accepts w s2.
 Proof.
-revert s1 s2; induction w; simpl; intros.
-- apply existsb_exists in H as [s Hs].
-  apply existsb_exists; exists s; split. apply H0, Hs. apply Hs.
-- eapply IHw. apply H.
-  intros; apply in_flat_map_Exists, Exists_exists in H1 as [t Ht].
-  apply in_flat_map_Exists, Exists_exists; exists t; split.
-  apply H0, Ht. apply Ht.
+revert s1 s2; induction w; simpl; intros s1 s2 H.
+- rewrite ?existsb_exists; intros [x Hx]; exists x.
+  split. apply H, Hx. apply Hx.
+- apply IHw; intros s; rewrite ?in_flat_map.
+  intros [x Hx]; exists x; split. apply H, Hx. apply Hx.
 Qed.
+
+Corollary Accepts_eqv w s1 s2 :
+  (∀s, In s s1 <-> In s s2) -> Accepts w s1 <-> Accepts w s2.
+Proof.
+intros; split; apply Accepts_subset, H.
+Qed. 
 
 Theorem Accepts_app w s t :
   Accepts w (s ++ t) <-> Accepts w s \/ Accepts w t.
@@ -86,20 +85,8 @@ induction s; simpl; intros.
   rewrite Accepts_app, IHs. split.
   + intros [H|[t H]]; [exists a|exists t]; split.
     now left. easy. now right. easy.
-  + intros [t [[R|Hs] Ht]]; subst. now left.
+  + intros [t [[eq_t|Hs] Ht]]; subst. now left.
     right; exists t; easy.
-Qed.
-
-Theorem Aut_Accepts f s w :
-  Automorphism f -> Accepts w [s] <-> Accepts w [f s].
-Proof.
-intros aut; revert s; induction w as [|c w]; simpl; intros.
-- rewrite ?orb_false_r. apply eq_iff_eq_true, aut.
-- rewrite ?app_nil_r, ?Accepts_determine.
-  split; intros [t [Hs Ht]].
-  all: apply in_map with (f:=f), aut, in_map_iff in Hs as [t' [R Ht']].
-  all: apply IHw in Ht; rewrite <-R in Ht; apply IHw in Ht.
-  all: exists t'; easy.
 Qed.
 
 End Definitions.
@@ -107,7 +94,6 @@ End Definitions.
 Arguments Accepts {_}.
 Arguments Language {_}.
 Arguments Deterministic {_}.
-Arguments Automorphism {_}.
 Arguments Finite {_}.
 
 Module Automata.
@@ -131,30 +117,19 @@ Theorem prod_Accepts word s t :
   Accepts prod word (list_prod s t).
 Proof.
 revert s t; induction word as [|c w]; simpl; intros.
-- split.
-  + intros [Ha Hb];
-    apply existsb_exists in Ha as [sa Ha];
-    apply existsb_exists in Hb as [sb Hb].
-    apply existsb_exists; exists (sa, sb); split.
-    * now apply in_prod.
-    * unfold prod_accept; simpl; now b_Prop.
-  + intros H.
-    apply existsb_exists in H as [[sa sb] [H1 H2]].
-    apply in_prod_iff in H1. unfold prod_accept in H2; simpl in H2; b_Prop.
-    split; apply existsb_exists. now exists sa. now exists sb.
-- split; intros.
-  + eapply Accepts_subset. apply IHw, H.
-    intros [sa sb] Hs. apply in_prod_iff in Hs as [Ha Hb].
-    apply in_flat_map in Ha as [sa' Ha];
-    apply in_flat_map in Hb as [sb' Hb].
-    apply in_flat_map; exists (sa', sb'); split.
-    now apply in_prod. unfold prod_trans; simpl. now apply in_prod.
-  + apply IHw; eapply Accepts_subset. apply H. intros [sa sb] Hs.
-    apply in_flat_map in Hs as [[sa' sb'] [H1 H2]].
-    unfold prod_trans in H2; simpl in H2.
-    apply in_prod_iff in H1; apply in_prod_iff in H2.
-    apply in_prod; apply in_flat_map.
-    now exists sa'. now exists sb'.
+- rewrite ?existsb_exists; split.
+  + intros [[sa Ha] [sb Hb]]; exists (sa, sb); split.
+    now apply in_prod. unfold prod_accept; simpl; b_Prop; easy.
+  + intros [[sa sb] [H1 H2]]; apply in_prod_iff in H1.
+    unfold prod_accept in H2; simpl in H2; b_Prop.
+    split; [exists sa|exists sb]; easy.
+- rewrite IHw; apply Accepts_eqv; intros [sa sb].
+  simpl; rewrite in_prod_iff, ?in_flat_map; split.
+  + intros [[sa' Ha] [sb' Hb]]; exists (sa', sb').
+    split; apply in_prod; easy.
+  + intros [[sa' sb'] [Ha Hb]].
+    apply in_prod_iff in Ha; apply in_prod_iff in Hb; simpl in *.
+    split; [exists sa'|exists sb']; easy.
 Qed.
 
 Corollary prod_spec word :
@@ -174,23 +149,7 @@ Qed.
 Theorem prod_size m n :
   Finite A m -> Finite B n -> Finite prod (m * n).
 Proof.
-intros [f [Q [Q_len [f_ran f_aut]]]];
-intros [g [R [R_len [g_ran g_aut]]]].
-exists (λ s, (f (fst s), g (snd s))), (list_prod Q R); split; [|split].
-- simpl; rewrite prod_length, Q_len, R_len; easy.
-- intros [s t]; simpl; apply in_prod; easy.
-- (* The mapping is an automorphism. *)
-  intros [s t]; simpl; split.
-  + unfold prod_accept; simpl.
-    rewrite (proj1 (f_aut s)), (proj1 (g_aut t)); reflexivity.
-  + intros c [s' t']; unfold prod_trans; simpl.
-    rewrite ?in_map_iff; split; intros [[s'' t''] [H1 H2]]; simpl in *.
-    all: inv H1; apply in_prod_iff in H2 as [Hs Ht].
-    all: apply in_map with (f:=f), f_aut, in_map_iff in Hs as [s''' [eq_s Hs]].
-    all: apply in_map with (f:=g), g_aut, in_map_iff in Ht as [t''' [eq_t Ht]].
-    all: exists (s''', t'''); simpl; split; [congruence|].
-    all: apply in_prod; easy.
-Qed.
+Admitted.
 
 End Product.
 
@@ -198,37 +157,60 @@ End Product.
 Section Powerset.
 
 Variable A : automaton letter.
+Variable Q : list (state A).
+Hypothesis Q_spec : ∀s, In s Q.
+Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
-Definition pow_start := [start A].
-Definition pow_accept s := existsb (accept A) s.
-Definition pow_trans c s := [flat_map (trans A c) s].
+Notation pow_state := (Σ ns, normalize dec Q ns = ns).
+Definition pow_norm s : pow_state :=
+  existT _ (normalize _ _ s) (normalize_normalize _ _ _ s).
+
+Definition pow_start := pow_norm [start A].
+Definition pow_accept (s : pow_state) := existsb (accept A) (projT1 s).
+Definition pow_trans c (s : pow_state) :=
+  [pow_norm (flat_map (trans A c) (projT1 s))].
+
 Definition pow := Automaton _ _ pow_start pow_accept pow_trans.
 
 Theorem pow_Accepts word ss :
-  Accepts pow word ss <-> Exists (Accepts A word) ss.
+  Accepts pow word (map pow_norm ss) <-> Exists (Accepts A word) ss.
 Proof.
 revert ss; induction word as [|c w]; simpl; intros.
-- split.
-  + intros H; apply existsb_exists in H as [s H].
-    apply Exists_exists; now exists s.
-  + intros H; apply Exists_exists in H as [s H].
-    apply existsb_exists; now exists s.
-- split.
-  + intros H; apply IHw, Exists_exists in H as [s [H1 H2]].
-    apply in_flat_map in H1 as [t [H1 H3]].
-    inv H3. apply Exists_exists; now exists t.
-  + intros H; apply Exists_exists in H as [s H].
-    apply IHw, Exists_exists; exists (flat_map (trans A c) s); split.
-    * apply in_flat_map; exists s; split. easy. apply in_eq.
-    * easy.
+- (* Valid accept states. *)
+  rewrite existsb_exists, Exists_exists; split.
+  + (* pow accepts -> A accepts *)
+    intros [[s s_norm] []].
+    unfold pow_accept in H0; simpl in H0.
+    apply in_map_iff in H as [s' []]; inv H.
+    exists s'; split. easy.
+    apply existsb_exists in H0 as [s'' []].
+    rewrite existsb_exists; exists s''; split.
+    eapply normalize_sound, H. easy.
+  + (* A accepts -> pow accepts. *)
+    intros [s []]; exists (pow_norm s); split. apply in_map, H.
+    apply existsb_exists in H0 as [s' []].
+    apply existsb_exists; exists s'; split.
+    apply normalize_complete. all: easy.
+- (* Valid transitions. *)
+  unfold pow_trans.
+  rewrite flat_map_singleton, map_map, <-map_map.
+  rewrite IHw, ?Exists_exists; split; intros [s []].
+  + apply in_map_iff in H as [s' []]; subst.
+    exists s'; split. easy. eapply Accepts_subset. 2: apply H0.
+    intros s; rewrite ?in_flat_map; intros [s'' []].
+    exists s''; split. eapply normalize_sound, H. easy.
+  + eexists; split. apply in_map_iff; eexists; split.
+    reflexivity. apply H. eapply Accepts_subset. 2: apply H0.
+    intros s'; rewrite ?in_flat_map; intros [s'' []].
+    exists s''; split. apply normalize_complete. all: easy.
 Qed.
 
-Corollary pow_spec word :
+Theorem pow_spec word :
   Language pow word <-> Language A word.
 Proof.
-split; intros H.
-- apply pow_Accepts in H; inv H.
-- apply pow_Accepts. apply Exists_cons; now left.
+unfold Language; simpl; unfold pow_start.
+replace ([pow_norm _]) with (map pow_norm [[start A]]) by easy.
+rewrite pow_Accepts, Exists_cons, Exists_nil, or_remove_r; easy.
 Qed.
 
 Theorem pow_det :
@@ -237,33 +219,9 @@ Proof.
 easy.
 Qed.
 
-Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
-
-Theorem pow_size n :
-  Finite A n -> Finite pow (2^n).
+Theorem pow_size :
+  Finite pow (2^length Q).
 Proof.
-intros [f [Q [Q_len [f_ran f_aut]]]].
-pose(g s := powerset_lookup dec Q (map f s)).
-exists g, (powerset Q); split; [|split].
-- rewrite <-Q_len; apply powerset_length.
-- intros; apply powerset_lookup_in.
-- (* g is an automorphism. *)
-  intros s; simpl.
-  assert(Hh : ∀x, In x (map f s) <-> In x (g s)). {
-    apply powerset_lookup_eqv; intros y H.
-    apply in_map_iff in H as [x [H _]]; subst.
-    apply f_ran. }
-  split.
-  + (* Same accept states. *)
-    unfold pow_accept; apply eq_iff_eq_true.
-    rewrite ?existsb_exists; split; intros [t [H1 H2]].
-    * exists (f t); split. rewrite <-Hh; apply in_map, H1.
-      rewrite <-(proj1 (f_aut t)); apply H2.
-    * apply Hh, in_map_iff in H1 as [t' [eq H1]]; subst.
-      exists t'; split. easy. rewrite (proj1 (f_aut t')); apply H2.
-  + (* Same transitions. *)
-    intros. rewrite ?or_remove_r with (Q:=False); try easy.
-    apply eq_iff, powerset_lookup_wd; intros.
 Admitted.
 
 End Powerset.
@@ -384,21 +342,21 @@ revert s; induction word as [|c w]; simpl; intros.
 - split.
   + exists nil; split. apply Forall2_nil. easy.
   + intros [w [H1 H2]]; inv H1.
-- split.
-  + intros. apply IHw in H as [v [H1 H2]].
-    apply Accepts_determine in H2 as [t [H Ht]].
+- rewrite IHw; split; intros [v [H1 H2]].
+  + apply Accepts_determine in H2 as [t [H Ht]].
     apply in_flat_map in H as [t' [Ht' H]].
     apply in_flat_map in H as [c' Hc'].
     exists (c' :: v); simpl; split.
     * now apply Forall2_cons.
-    * eapply Accepts_subset. apply Ht. intros y Hy. inv Hy; try easy.
+    * eapply Accepts_subset. 2: apply Ht.
+      intros t'' Ht''; inv Ht''.
       apply in_flat_map; exists t'; easy.
-  + intros [v [H1 H2]]. destruct v; simpl in *. easy.
-    inv H1. apply IHw; exists v; repeat split. easy.
-    eapply Accepts_subset. apply H2. intros t Ht.
-    apply in_flat_map in Ht as [t' Ht].
-    apply in_flat_map; exists t'; split. easy.
-    apply in_flat_map; exists l; easy.
+  + destruct v; simpl in *. easy. inv H1.
+    exists v; repeat split. easy.
+    eapply Accepts_subset. 2: apply H2.
+    intros t; rewrite ?in_flat_map.
+    intros [t' Ht]; exists t'; split.
+    easy. apply in_flat_map; exists l; easy.
 Qed.
 
 Corollary proj_spec word :
@@ -438,13 +396,10 @@ Fixpoint retr_accept n s : bool :=
 Section Early_accept_states.
 
 Variable Q : list (state A).
-Variable aut : state A -> state A.
-Hypothesis aut_ran : ∀s, In (aut s) Q.
-Hypothesis aut_spec : Automorphism A aut.
+Hypothesis Q_spec : ∀s, In s Q.
 
-Definition suffix_adj s := map aut (trans A p s).
-Definition Early_accept := Connected suffix_adj (λ s, accept A s = true) Q.
-Notation suffix_path := (path suffix_adj (λ s, accept A s = true) Q).
+Definition Early_accept := Connected (trans A p) (λ s, accept A s = true) Q.
+Notation suffix_path := (path (trans A p) (λ s, accept A s = true) Q).
 
 Theorem Early_accept_complete s n :
   Accepts A (repeat p n) [s] -> Early_accept s.
@@ -452,9 +407,7 @@ Proof.
 revert s; induction n; simpl; intros.
 - rewrite orb_false_r in H; apply conn, path_stop, H.
 - rewrite app_nil_r in H; apply Accepts_determine in H as [t [Hs Ht]].
-  apply Aut_Accepts with (f:=aut), IHn in Ht as [path].
-  apply conn, path_step with (w:=aut t).
-  apply aut_ran. apply in_map, Hs. apply path. apply aut_spec.
+  apply IHn in Ht as [path]. apply conn, path_step with (w:=t); easy.
 Qed.
 
 Theorem retr_accept_sound n s :
@@ -470,10 +423,6 @@ Qed.
 Theorem retr_accept_complete s (path : suffix_path s) :
   retr_accept (1 + path_length path) s = true.
 Proof.
-induction path; simpl; b_Prop.
-now left. right; apply existsb_exists.
-apply in_map_iff in i0 as [t [R H]]; subst; exists t; split. easy.
-simpl in IHpath; b_Prop; [left|right].
 Admitted.
 
 Lemma retr_accept_weaken m n s :
@@ -509,8 +458,8 @@ Theorem retr_Accepts word s :
   Accepts retr word s <-> ∃n, Accepts A (word ++ repeat p n) s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
-- destruct finite as [f [Q [Q_len [f_ran f_spec]]]].
-  rewrite <-Q_len; apply retr_accept_spec with (aut:=f); easy.
+- destruct finite as [Q [Q_len Q_spec]].
+  rewrite <-Q_len; apply retr_accept_spec; easy.
 - apply IHw.
 Qed.
 
@@ -552,11 +501,9 @@ Hypothesis state_dec : ∀s t : state A, {s = t} + {s ≠ t}.
 Section Connectivity_to_an_accept_state.
 
 Variable Q : list (state A).
-Variable aut : state A -> state A.
-Hypothesis aut_ran : ∀s, In (aut s) Q.
-Hypothesis aut_spec : Automorphism A aut.
+Hypothesis Q_spec : ∀s, In s Q.
 
-Definition trans_adj s := map aut (flat_map (λ c, trans A c s) alphabet).
+Definition trans_adj s := flat_map (λ c, trans A c s) alphabet.
 Definition Acceptable := Connected trans_adj (λ s, accept A s = true) Q.
 
 Theorem Acceptable_Accepts s :
@@ -564,12 +511,9 @@ Theorem Acceptable_Accepts s :
 Proof.
 intros [p]; induction p.
 - exists nil; simpl; now rewrite e.
-- apply in_map_iff in i0 as [s [R Hs]]; subst.
-  apply in_flat_map in Hs as [c [_ Hc]].
-  destruct IHp as [w Hw]; exists (c :: w); simpl.
-  rewrite app_nil_r; eapply Accepts_subset.
-  apply Aut_Accepts with (f:=aut), Hw; easy.
-  intros s' Hs'; inv Hs'.
+- apply in_flat_map in i0 as [c [_ Hc]].
+  destruct IHp as [w' Hw]; exists (c :: w'); simpl.
+  rewrite app_nil_r; apply Accepts_determine; exists w; easy.
 Qed.
 
 Theorem Accepts_Acceptable s w :
@@ -579,11 +523,9 @@ revert s; induction w as [|c w]; simpl; intros.
 - rewrite orb_false_r in H. now apply conn, path_stop.
 - rewrite app_nil_r in H.
   apply Accepts_determine in H as [t [Ht Hw]].
-  apply Aut_Accepts with (f:=aut), IHw in Hw as [p].
-  apply conn, path_step with (w:=aut t). apply aut_ran.
-  apply in_map_iff; exists t; split. easy.
+  apply IHw in Hw as [p].
+  apply conn, path_step with (w:=t). easy.
   apply in_flat_map; exists c; easy. easy.
-  apply aut_spec.
 Qed.
 
 Corollary Acceptable_dec s :
@@ -601,11 +543,11 @@ Hypothesis finite : Finite A size.
 Corollary ex_Accepts_dec s :
   {∃w, Accepts A w [s]} + {∀w, ¬Accepts A w [s]}.
 Proof.
-destruct finite as [f [Q [Q_len [f_ran f_aut]]]].
-destruct (Acceptable_dec Q f s).
-- left; eapply Acceptable_Accepts. apply f_aut. apply a.
+destruct finite as [Q [_ Q_spec]].
+destruct (Acceptable_dec Q s).
+- left; eapply Acceptable_Accepts, a.
 - right; intros w; eapply contra. apply Accepts_Acceptable.
-  apply f_ran. apply f_aut. easy.
+  apply Q_spec. easy.
 Qed.
 
 Corollary Language_inhabited_dec :

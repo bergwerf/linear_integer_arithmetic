@@ -140,13 +140,6 @@ Qed.
 
 Section Lemmas.
 
-Lemma finite_type {letter} (A : automaton letter) n :
-  (Σ Q, length Q = n /\ ∀s : state A, In s Q) -> Finite A n.
-Proof.
-intros [Q [Q_len Q_spec]]; exists id, Q; split.
-apply Q_len. split. apply Q_spec. easy.
-Qed.
-
 Lemma finite_unit :
   Σ Q, length Q = 1 /\ ∀v : unit, In v Q.
 Proof.
@@ -206,7 +199,7 @@ Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_zero); intros.
   simpl; destruct c; simpl; lia.
-- apply Automata.opt_size, finite_type, finite_unit.
+- apply Automata.opt_size, finite_unit.
 - apply option_unit_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_zero_spec.
@@ -221,7 +214,7 @@ Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_one); intros.
   simpl; destruct c, s; simpl; lia.
-- apply Automata.opt_size, finite_type, finite_bool.
+- apply Automata.opt_size, finite_bool.
 - apply option_bool_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_one_spec.
@@ -238,7 +231,7 @@ pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
 eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_eq); intros.
   simpl; destruct c as [[] []], s; simpl; lia.
-- apply Automata.opt_size, finite_type, finite_unit.
+- apply Automata.opt_size, finite_unit.
 - apply option_unit_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_eq_spec.
@@ -256,7 +249,7 @@ pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
 eapply regular_proj with (pr:=f).
 eapply Regular with (r_dfa:=dfa_le).
 - easy.
-- apply finite_type, finite_bool.
+- apply finite_bool.
 - apply bool_dec.
 - apply dfa_le_spec.
 - intros; simpl.
@@ -274,7 +267,7 @@ pose(f (c : vec (S n)) :=
 eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_add); intros.
   simpl; destruct c as [[[] []] []], s; simpl; lia.
-- apply Automata.opt_size, finite_type, finite_bool.
+- apply Automata.opt_size, finite_bool.
 - apply option_bool_dec.
 - apply Automata.opt_spec.
 - intros; apply dfa_add_spec.

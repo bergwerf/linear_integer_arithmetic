@@ -96,8 +96,9 @@ Lemma regular_ex φ n :
   regular (λ w : list (vec (S n)), Model |= (φ)[vctx w]) ->
   regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
 Proof.
-intros [A det size fin dec spec].
+intros [A det size [Q [_ Q_spec]] dec spec].
 pose(pr (v : vec n) := [true ;; v; false ;; v]).
+(* We may first need to construct the state space.
 eapply Regular.
 - apply Automata.pow_det.
 - apply Automata.pow_size, Automata.proj_size with (pr:=pr), fin. apply dec.
@@ -133,6 +134,7 @@ eapply Regular.
     it seems that a course at EPFL from 2008 deals with precisely this issue:
     https://lara.epfl.ch/w/sav08/using_automata_to_decide_ws1s
     *)
+*)
 Admitted.
 
 Theorem automatic_structure φ :

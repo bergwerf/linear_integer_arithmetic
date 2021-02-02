@@ -168,10 +168,17 @@ Section Mapping.
 Variable X Y : Type.
 Variable f : X -> Y.
 
-Theorem map_map_singleton xs :
-  map (λ x, [f x]) xs = map (λ y, [y]) (map f xs).
+Theorem map_map_singleton l :
+  map (λ x, [f x]) l = map (λ y, [y]) (map f l).
 Proof.
 now rewrite map_map.
+Qed.
+
+Theorem flat_map_singleton l :
+  flat_map (λ x, [f x]) l = map f l.
+Proof.
+induction l; simpl.
+easy. now rewrite IHl.
 Qed.
 
 Theorem nth_map i l d x :
@@ -205,27 +212,6 @@ Fixpoint map2 xs ys :=
 
 End Double_mapping.
 
-Arguments map2 {_ _ _}.
-
-Section Trimming.
-
-Variable X : Type.
-Variable default : X.
-
-Fixpoint trim n (l : list X) :=
-  match n with
-  | 0   => []
-  | S m =>
-    match l with
-    | [] => default :: trim m []
-    | x :: l' =>  x :: trim m l'
-    end
-  end.
-
-End Trimming.
-
-Arguments trim {_}.
-
 Section Strip_option_list.
 
 Variable X : Type.
@@ -253,8 +239,6 @@ Qed.
 
 End Strip_option_list.
 
-Arguments strip {_}.
-
 Section List_constructions_using_decidability.
 
 Variable X : Type.
@@ -262,72 +246,72 @@ Hypothesis dec : ∀x y : X, {x = y} + {x ≠ y}.
 
 Section Powerset.
 
-Fixpoint powerset (l : list X) :=
-  match l with
-  | []      => [[]]
-  | x :: l' => let p := powerset l' in p ++ map (cons x) p
+Fixpoint powerset (u : list X) :=
+  match u with
+  | [] => [[]]
+  | a :: v => let p := powerset v in p ++ map (cons a) p
   end.
 
-Fixpoint powerset_lookup (l s : list X) :=
-  match l with
+Fixpoint normalize (u l : list X) :=
+  match u with
   | [] => []
-  | a :: l' =>
-    let tl := powerset_lookup l' (remove dec a s) in
-    if in_dec dec a s then a :: tl else tl
+  | a :: v =>
+    let tl := normalize v (remove dec a l) in
+    if in_dec dec a l then a :: tl else tl
   end.
 
-Theorem powerset_length l :
-  length (powerset l) = 2^length l.
+Theorem powerset_length u :
+  length (powerset u) = 2^length u.
 Proof.
-induction l; simpl. easy.
-now rewrite Nat.add_0_r, app_length, map_length, ?IHl.
+induction u; simpl. easy.
+now rewrite Nat.add_0_r, app_length, map_length, ?IHu.
 Qed.
 
-Theorem powerset_spec l s x :
-  In s (powerset l) -> In x s -> In x l.
+Theorem powerset_trans u l x :
+  In x l -> In l (powerset u) -> In x u.
 Proof.
-revert s; induction l; simpl; intros.
+revert l; induction u; simpl; intros l H' H.
 - destruct H; subst; easy.
 - destruct (dec a x). now left. right.
-  apply in_app_or in H as [H|H]. now apply IHl in H.
-  apply in_map_iff in H as [s' [R H]]; subst.
-  inv H0. now apply IHl in H.
+  apply in_app_or in H as [H|H]. now apply IHu in H.
+  apply in_map_iff in H as [l' [eq_l H]]; subst.
+  inv H'. now apply IHu in H.
 Qed.
 
-Theorem powerset_lookup_in l s :
-  In (powerset_lookup l s) (powerset l).
+Theorem normalize_spec u l :
+  In (normalize u l) (powerset u).
 Proof.
-revert s; induction l; simpl; intros. now left.
-destruct (in_dec dec a s); apply in_app_iff; [right|left].
-apply in_map. all: apply IHl.
+revert l; induction u; simpl; intros. now left.
+destruct (in_dec dec a l); apply in_app_iff; [right|left].
+apply in_map. all: apply IHu.
 Qed.
 
-Theorem powerset_lookup_wd l s t :
-  (∀x, In x s <-> In x t) ->
-  powerset_lookup l s = powerset_lookup l t.
+Theorem normalize_sound u l x :
+  In x (normalize u l) -> In x l.
 Proof.
-revert s t; induction l; simpl; intros. easy.
-rewrite IHl with (t:=remove dec a t).
-- destruct (in_dec dec a s), (in_dec dec a t).
-  now apply wd. 1,2: exfalso; apply n, H, i. easy.
-- split; intros Hx; apply in_remove in Hx.
-  all: apply in_in_remove; [apply Hx|apply H, Hx].
+revert l; induction u; simpl; intros. easy.
+destruct (in_dec dec a l); simpl. inv H; rename H0 into H.
+all: apply IHu, in_remove in H; easy.
 Qed.
 
-Theorem powerset_lookup_eqv l s :
-  (∀x, In x s -> In x l) ->
-  (∀x, In x s <-> In x (powerset_lookup l s)).
+Theorem normalize_complete u l x :
+  In x u -> In x l -> In x (normalize u l).
 Proof.
-revert s; induction l; simpl; intros.
-- split; [apply H|easy].
-- assert(Htl : ∀x, In x (remove dec a s) -> In x l). {
-    intros. apply in_remove in H0 as [H1 H2].
-    apply H in H1 as [H1|H1]. congruence. easy. }
-  assert(IH := IHl _ Htl).
-  destruct (in_dec dec a s); simpl; rewrite <-IH.
-  + destruct (dec x a); subst; split; intros H'; try destruct H'; auto.
-    right; apply in_in_remove; easy. congruence. now apply in_remove in H0.
-  + rewrite notin_remove; easy.
+revert l; induction u; simpl; intros. easy.
+destruct (in_dec dec a l), (dec x a), H; simpl; subst; auto; try easy. right.
+all: apply IHu; [easy|]; apply in_in_remove; easy.
+Qed.
+
+Theorem normalize_normalize u l :
+  normalize u (normalize u l) = normalize u l.
+Proof.
+revert l; induction u; simpl; intros. easy.
+destruct (in_dec dec a l); simpl.
+destruct (dec a a); [|easy]. apply wd.
+2: destruct (in_dec _ _ _).
+2: apply normalize_sound, remove_In in i; easy.
+all: rewrite notin_remove; [apply IHu|].
+all: eapply contra; [apply normalize_sound|apply remove_In].
 Qed.
 
 End Powerset.
@@ -404,8 +388,10 @@ End Intersection_and_subtraction.
 
 End List_constructions_using_decidability.
 
+Arguments map2 {_ _ _}.
+Arguments strip {_}.
 Arguments powerset {_}.
-Arguments powerset_lookup {_}.
+Arguments normalize {_}.
 Arguments pfilter {_}.
 Arguments intersect {_}.
 Arguments subtract {_}.
