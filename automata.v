@@ -90,13 +90,6 @@ induction s; simpl; intros.
     right; exists t; easy.
 Qed.
 
-Theorem Similar_accept s t :
-  Similar [s] [t] -> accept A s = accept A t.
-Proof.
-intros H; assert(H' := H []); simpl in H'.
-rewrite ?orb_false_r in H'. apply eq_iff_eq_true, H'.
-Qed.
-
 End Definitions.
 
 Arguments Accepts {_}.
@@ -451,65 +444,39 @@ Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
 Definition fixed_adj s := map can (trans A p s).
 Definition Early_accept := Connected fixed_adj (λ s, accept A s = true).
 
-Theorem Early_accept_spec s :
-  Early_accept Q s <-> ∃n, Accepts A (repeat p n) [s].
+Theorem Early_accept_complete s n :
+  Accepts A (repeat p n) [s] -> Early_accept Q s.
 Proof.
-split.
-- (* From a path to an accepted p* string. *)
-  intros [pad]; exists (path_length pad); induction pad; simpl.
-  rewrite e; easy. rewrite app_nil_r.
-  apply in_map_iff in i0 as [w' [R Hw]]; subst.
-  apply Accepts_determine; exists w'; split. easy.
-  apply can_spec, IHpad.
-- (* From an accepted p* string to a path. *)
-  intros [n H]. revert H; revert s; induction n; simpl; intros.
-  + rewrite orb_false_r in H; apply conn, path_stop, H.
-  + rewrite app_nil_r in H; apply Accepts_determine in H as [t [H1 H2]].
-    apply can_spec, IHn in H2 as [pad]. apply conn, path_step with (w:=can t).
-    apply can_spec. apply in_map, H1. apply pad.
+revert s; induction n; simpl; intros.
+- rewrite orb_false_r in H; apply conn, path_stop, H.
+- rewrite app_nil_r in H; apply Accepts_determine in H as [t [Hs Ht]].
+  apply can_spec, IHn in Ht as [pad]. apply conn, path_step with (w:=can t).
+  apply can_spec. apply in_map, Hs. apply pad.
 Qed.
 
-Lemma retr_accept_Similar s t n :
-  Similar A [s] [t] -> retr_accept n s = retr_accept n t.
-Proof.
-revert s t; induction n; simpl; intros. easy.
-rewrite Similar_accept with (t:=t). 2: apply H.
-destruct (accept A t); simpl. easy.
-apply eq_iff_eq_true; rewrite ?existsb_exists.
-split; intros [s' H'].
-(*
-There is an intuitive sense that this should hold, but the proof is not clear.
-The definition of Similar is making this much harder than it should be. I think
-I should replace Similar with a definition of isomorphic states which is defined
-directly relative to accept and trans.
-*)
-Admitted.
-
-Theorem retr_accept_Early_accept n s :
-  retr_accept n s = true -> Early_accept Q s.
+Theorem retr_accept_sound n s :
+  retr_accept n s = true -> ∃n, Accepts A (repeat p n) [s].
 Proof.
 revert s; induction n; simpl; intros. easy. b_Prop.
-- apply conn, path_stop, e.
-- apply existsb_exists in e as [t [H1 H2]].
-  rewrite retr_accept_Similar with (t:=can t) in H2; apply IHn in H2 as [pad].
-  apply conn, path_step with (w:=can t).
-  apply can_spec. apply in_map, H1. apply pad. apply can_spec.
+- exists 0; simpl. rewrite e; easy.
+- apply existsb_exists in e as [t [Hs Ht]].
+  apply IHn in Ht as [m Ht]; exists (S m); simpl.
+  rewrite app_nil_r; apply Accepts_determine; exists t; easy.
 Qed.
 
-Theorem Early_accept_retr_accept s :
+Theorem retr_accept_complete s :
   Early_accept Q s -> retr_accept (length Q) s = true.
 Proof.
 Admitted.
 
-Corollary existsb_retr_accept_Accepts_repeat s :
+Corollary retr_accept_spec s :
   existsb (retr_accept (length Q)) s = true <-> ∃n, Accepts A (repeat p n) s.
 Proof.
 rewrite existsb_exists; split; intros [i H].
-- destruct H as [Hs Hi].
-  apply retr_accept_Early_accept, Early_accept_spec in Hi as [n Hi].
-  exists n; apply Accepts_determine; exists i; easy.
+- destruct H as [Hs Hi]. apply retr_accept_sound in Hi as [n Hn]; exists n.
+  apply Accepts_determine; exists i; easy.
 - apply Accepts_determine in H as [t H]; exists t; split. easy.
-  apply Early_accept_retr_accept, Early_accept_spec. exists i; apply H.
+  eapply retr_accept_complete, Early_accept_complete, H.
 Qed.
 
 End Early_accept_states.
@@ -525,7 +492,7 @@ Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - destruct finite as [Q [Q_len Hcan]].
   apply sigma_function in Hcan as [can can_spec].
-  rewrite <-Q_len; eapply existsb_retr_accept_Accepts_repeat, can_spec.
+  rewrite <-Q_len; eapply retr_accept_spec, can_spec.
 - apply IHw.
 Qed.
 
