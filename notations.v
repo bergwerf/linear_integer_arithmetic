@@ -1,6 +1,7 @@
 (* General purpose notations. *)
 
-Require Import Utf8 Vector.
+Require Vector.
+Require Import Utf8 List.
 
 (* Sigma types. *)
 Notation "'Σ' x .. y , P" := (sigT (λ x, .. (sigT (λ y, P)) ..))
@@ -10,5 +11,9 @@ Notation "'Σ' x .. y , P" := (sigT (λ x, .. (sigT (λ y, P)) ..))
 (* Cartesian products. *)
 Notation "A × B" := (prod A B) (at level 100).
 
-(* We primarily use boolean vectors. *)
+(* List inclusions. *)
+(* Notation "a ⊆ b" := (∀x, In x a -> In x b) (at level 50). *)
+(* Notation "a == b" := (∀x, In x a <-> In x b) (at level 50). *)
+
+(* Boolean vectors. *)
 Notation vec := (Vector.t bool).

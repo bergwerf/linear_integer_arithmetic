@@ -13,28 +13,10 @@ Section Propositions.
 
 Variable P Q : Prop.
 
-Theorem triple_not :
-  ¬¬¬P -> ¬P.
-Proof.
-auto.
-Qed.
-
-Theorem weaken :
-  P -> ¬¬P.
-Proof.
-auto.
-Qed.
-
 Theorem contra :
   (P -> Q) -> (¬Q -> ¬P).
 Proof.
 auto.
-Qed.
-
-Theorem not_or_and :
-  ¬(P \/ Q) <-> ¬P /\ ¬Q.
-Proof.
-split; auto. now intros [H1 H2] [H|H].
 Qed.
 
 Theorem and_remove_r :
@@ -78,7 +60,6 @@ Section Predicates.
 
 Variable X Y : Type.
 Variable P Q : X -> Prop.
-Variable R : X -> Y -> Prop.
 
 Theorem ex_iff :
   (∀x, P x <-> Q x) -> (∃x, P x) <-> (∃x, Q x).
@@ -86,11 +67,10 @@ Proof.
 intros H; split; intros [x Hx]; exists x; apply H, Hx.
 Qed.
 
-Theorem sigma_function :
-  (∀x, Σ y, R x y) -> Σ f : X -> Y, ∀x, R x (f x).
+Lemma eq_iff (a b c : X) :
+  a = b -> a = c <-> b = c.
 Proof.
-intros H; exists (λ x, projT1 (H x)).
-intros; destruct (H x); easy.
+intros; subst; easy.
 Qed.
 
 End Predicates.
@@ -288,6 +268,14 @@ Fixpoint powerset (l : list X) :=
   | x :: l' => let p := powerset l' in p ++ map (cons x) p
   end.
 
+Fixpoint powerset_lookup (l s : list X) :=
+  match l with
+  | [] => []
+  | a :: l' =>
+    let tl := powerset_lookup l' (remove dec a s) in
+    if in_dec dec a s then a :: tl else tl
+  end.
+
 Theorem powerset_length l :
   length (powerset l) = 2^length l.
 Proof.
@@ -306,27 +294,43 @@ revert s; induction l; simpl; intros.
   inv H0. now apply IHl in H.
 Qed.
 
-Theorem powerset_lookup l s :
+Theorem powerset_lookup_in l s :
+  In (powerset_lookup l s) (powerset l).
+Proof.
+revert s; induction l; simpl; intros. now left.
+destruct (in_dec dec a s); apply in_app_iff; [right|left].
+apply in_map. all: apply IHl.
+Qed.
+
+Theorem powerset_lookup_wd l s t :
+  (∀x, In x s <-> In x t) ->
+  powerset_lookup l s = powerset_lookup l t.
+Proof.
+revert s t; induction l; simpl; intros. easy.
+rewrite IHl with (t:=remove dec a t).
+- destruct (in_dec dec a s), (in_dec dec a t).
+  now apply wd. 1,2: exfalso; apply n, H, i. easy.
+- split; intros Hx; apply in_remove in Hx.
+  all: apply in_in_remove; [apply Hx|apply H, Hx].
+Qed.
+
+Theorem powerset_lookup_eqv l s :
   (∀x, In x s -> In x l) ->
-  Σ t, In t (powerset l) /\ ∀x, In x s <-> In x t.
+  (∀x, In x s <-> In x (powerset_lookup l s)).
 Proof.
 revert s; induction l; simpl; intros.
-- exists []; split. now left. split; [apply H|easy].
-- pose(s' := remove dec a s).
-  destruct (IHl s') as [t [H1t H2t]].
-  + unfold s'; intros. apply in_remove in H0 as [H1 H2].
-    apply H in H1 as [H1|H1]. congruence. easy.
-  + exists (if in_dec dec a s then a :: t else t); split.
-    * destruct (in_dec dec a s); apply in_app_iff; [right|left].
-      apply in_map_iff; now exists t. easy.
-    * intros; destruct (in_dec dec a s); simpl; rewrite <-H2t.
-      destruct (dec x a); subst; split; intros H'; try destruct H'; auto.
-      right; now apply in_in_remove. congruence. now apply in_remove in H0.
-      unfold s'; rewrite notin_remove; easy.
+- split; [apply H|easy].
+- assert(Htl : ∀x, In x (remove dec a s) -> In x l). {
+    intros. apply in_remove in H0 as [H1 H2].
+    apply H in H1 as [H1|H1]. congruence. easy. }
+  assert(IH := IHl _ Htl).
+  destruct (in_dec dec a s); simpl; rewrite <-IH.
+  + destruct (dec x a); subst; split; intros H'; try destruct H'; auto.
+    right; apply in_in_remove; easy. congruence. now apply in_remove in H0.
+  + rewrite notin_remove; easy.
 Qed.
 
 End Powerset.
-
 
 Section Filtering.
 
@@ -401,6 +405,7 @@ End Intersection_and_subtraction.
 End List_constructions_using_decidability.
 
 Arguments powerset {_}.
+Arguments powerset_lookup {_}.
 Arguments pfilter {_}.
 Arguments intersect {_}.
 Arguments subtract {_}.

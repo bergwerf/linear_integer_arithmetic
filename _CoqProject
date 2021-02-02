@@ -8,7 +8,7 @@ binary.v
 path.v
 
 automata.v
-formulae.v
 regular.v
+formulae.v
 automatic.v
 binmodel.v

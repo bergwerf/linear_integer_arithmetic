@@ -33,13 +33,13 @@ Definition Language word := Accepts word [start A].
 (* An automaton is deterministic if every transition goes to 1 state. *)
 Definition Deterministic := ∀c s, length (trans A c s) = 1.
 
-(* Two state lists are considered similar if they accept the same strings. *)
-Definition Similar s t := ∀w, Accepts w s <-> Accepts w t.
+(* A state automorphism. *)
+Definition Automorphism f := ∀s, accept A s = accept A (f s) /\
+  ∀c t, In (f t) (map f (trans A c s)) <-> In (f t) (map f (trans A c (f s))).
 
-(* A finite automaton has a list of all states up to similarity. *)
-(* There is an effective procedure to point out a canonical state. *)
-Definition Finite n := Σ Q, (length Q = n) ×
-  (∀s : state A, Σ can, In can Q /\ Similar [s] [can]).
+(* A finite automaton has an automorphism with a finite domain. *)
+Notation Range f r := (∀x, In (f x) r).
+Definition Finite n := Σ f Q, length Q = n /\ Range f Q /\ Automorphism f.
 
 Theorem not_Accepts_nil w :
   ¬Accepts w [].
@@ -90,12 +90,24 @@ induction s; simpl; intros.
     right; exists t; easy.
 Qed.
 
+Theorem Aut_Accepts f s w :
+  Automorphism f -> Accepts w [s] <-> Accepts w [f s].
+Proof.
+intros aut; revert s; induction w as [|c w]; simpl; intros.
+- rewrite ?orb_false_r. apply eq_iff_eq_true, aut.
+- rewrite ?app_nil_r, ?Accepts_determine.
+  split; intros [t [Hs Ht]].
+  all: apply in_map with (f:=f), aut, in_map_iff in Hs as [t' [R Ht']].
+  all: apply IHw in Ht; rewrite <-R in Ht; apply IHw in Ht.
+  all: exists t'; easy.
+Qed.
+
 End Definitions.
 
 Arguments Accepts {_}.
 Arguments Language {_}.
 Arguments Deterministic {_}.
-Arguments Similar {_}.
+Arguments Automorphism {_}.
 Arguments Finite {_}.
 
 Module Automata.
@@ -162,16 +174,22 @@ Qed.
 Theorem prod_size m n :
   Finite A m -> Finite B n -> Finite prod (m * n).
 Proof.
-intros [Qa [Qa_len can_a]] [Qb [Qb_len can_b]];
-exists (list_prod Qa Qb); split.
-simpl; now rewrite prod_length, Qa_len, Qb_len.
-intros [sa sb];
-destruct (can_a sa) as [sa_can Hsa];
-destruct (can_b sb) as [sb_can Hsb].
-exists (sa_can, sb_can); split. now apply in_prod.
-intros w; simpl; rewrite ?list_prod_single.
-split; intros; apply prod_Accepts; apply prod_Accepts in H.
-all: split; [apply Hsa|apply Hsb]; easy.
+intros [f [Q [Q_len [f_ran f_aut]]]];
+intros [g [R [R_len [g_ran g_aut]]]].
+exists (λ s, (f (fst s), g (snd s))), (list_prod Q R); split; [|split].
+- simpl; rewrite prod_length, Q_len, R_len; easy.
+- intros [s t]; simpl; apply in_prod; easy.
+- (* The mapping is an automorphism. *)
+  intros [s t]; simpl; split.
+  + unfold prod_accept; simpl.
+    rewrite (proj1 (f_aut s)), (proj1 (g_aut t)); reflexivity.
+  + intros c [s' t']; unfold prod_trans; simpl.
+    rewrite ?in_map_iff; split; intros [[s'' t''] [H1 H2]]; simpl in *.
+    all: inv H1; apply in_prod_iff in H2 as [Hs Ht].
+    all: apply in_map with (f:=f), f_aut, in_map_iff in Hs as [s''' [eq_s Hs]].
+    all: apply in_map with (f:=g), g_aut, in_map_iff in Ht as [t''' [eq_t Ht]].
+    all: exists (s''', t'''); simpl; split; [congruence|].
+    all: apply in_prod; easy.
 Qed.
 
 End Product.
@@ -224,29 +242,29 @@ Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 Theorem pow_size n :
   Finite A n -> Finite pow (2^n).
 Proof.
-intros [Q [Q_len Q_can]]; exists (powerset Q).
-split; simpl. rewrite <-Q_len; apply powerset_length.
-(* ss_can associates ss with A-canonical states. *)
-intros ss; pose(ss_can_a := map (λ s, projT1 (Q_can s)) ss).
-(* ss_can associates ss_can_a with the canonical set in L. *)
-destruct (powerset_lookup _ dec Q ss_can_a) as [ss_can Hss].
-- intros s Hs. apply in_map_iff in Hs as [t [Hs Ht]].
-  destruct (Q_can t); simpl in *; subst; easy.
-- exists ss_can; split. easy.
-  intros w; split; intros.
-  all: apply pow_Accepts, Exists_exists; eexists; split; [apply in_eq|].
-  (* If pow accepts w, then A accepts w from a single state s. *)
-  all: apply pow_Accepts, Exists_exists in H as [ss' [R H]]; inv R.
-  all: apply Accepts_determine in H as [s [Hs H]].
-  + (* Determine A-canonical state for s, and apply similarity to H. *)
-    destruct (Q_can s) as [s_can Hcan] eqn:s_can_def. apply Hcan in H.
-    eapply Accepts_subset. apply H. intros t Ht; inv Ht.
-    apply Hss, in_map_iff; exists s. now rewrite s_can_def.
-  + (* s is an A-canonical state, find an original in ss. *)
-    apply Hss in Hs; apply in_map_iff in Hs as [t [R Ht]].
-    destruct (Q_can t) as [t_can Hcan]; simpl in R; subst.
-    apply Hcan in H. eapply Accepts_subset. apply H. intros r Hr; inv Hr.
-Qed.
+intros [f [Q [Q_len [f_ran f_aut]]]].
+pose(g s := powerset_lookup dec Q (map f s)).
+exists g, (powerset Q); split; [|split].
+- rewrite <-Q_len; apply powerset_length.
+- intros; apply powerset_lookup_in.
+- (* g is an automorphism. *)
+  intros s; simpl.
+  assert(Hh : ∀x, In x (map f s) <-> In x (g s)). {
+    apply powerset_lookup_eqv; intros y H.
+    apply in_map_iff in H as [x [H _]]; subst.
+    apply f_ran. }
+  split.
+  + (* Same accept states. *)
+    unfold pow_accept; apply eq_iff_eq_true.
+    rewrite ?existsb_exists; split; intros [t [H1 H2]].
+    * exists (f t); split. rewrite <-Hh; apply in_map, H1.
+      rewrite <-(proj1 (f_aut t)); apply H2.
+    * apply Hh, in_map_iff in H1 as [t' [eq H1]]; subst.
+      exists t'; split. easy. rewrite (proj1 (f_aut t')); apply H2.
+  + (* Same transitions. *)
+    intros. rewrite ?or_remove_r with (Q:=False); try easy.
+    apply eq_iff, powerset_lookup_wd; intros.
+Admitted.
 
 End Powerset.
 
@@ -305,16 +323,7 @@ Qed.
 Theorem opt_size n :
   Finite A n -> Finite opt (S n).
 Proof.
-intros [Q [Q_len can]];
-exists (None :: map Some Q); simpl; split.
-now rewrite map_length, Q_len. intros [s|].
-- destruct (can s) as [s_can Hs]; exists (Some s_can); split.
-  + apply in_cons. apply in_map_iff; exists s_can; easy.
-  + intros w; split; intros.
-    all: apply opt_Accepts; apply opt_Accepts in H; simpl in *.
-    all: now apply Hs.
-- exists None; split. apply in_eq. easy.
-Qed.
+Admitted.
 
 End Option.
 
@@ -351,11 +360,7 @@ Qed.
 Theorem compl_size n :
   Finite A n -> Finite compl n.
 Proof.
-intros [Q [Q_len can]]; exists Q; split. easy. intros.
-destruct (can s) as [s_can Hcan]; exists s_can. split. easy.
-intros w; split; intros; apply compl_Accepts; apply compl_Accepts in H.
-all: intros H'; apply H, Hcan, H'.
-Qed.
+Admitted.
 
 End Complementation.
 
@@ -413,12 +418,7 @@ Qed.
 Theorem proj_size n :
   Finite A n -> Finite proj n.
 Proof.
-intros [Q [Q_len can]]; exists Q; split. easy. intros.
-destruct (can s) as [s_can Hcan]; exists s_can; split. easy.
-intros w; split; intros; apply proj_Accepts;
-apply proj_Accepts in H as [pre H]; exists pre.
-all: split; [easy|apply Hcan, H].
-Qed.
+Admitted.
 
 End Projection.
 
@@ -438,10 +438,11 @@ Fixpoint retr_accept n s : bool :=
 Section Early_accept_states.
 
 Variable Q : list (state A).
-Variable can : state A -> state A.
-Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
+Variable aut : state A -> state A.
+Hypothesis aut_ran : ∀s, In (aut s) Q.
+Hypothesis aut_spec : Automorphism A aut.
 
-Definition suffix_adj s := map can (trans A p s).
+Definition suffix_adj s := map aut (trans A p s).
 Definition Early_accept := Connected suffix_adj (λ s, accept A s = true) Q.
 Notation suffix_path := (path suffix_adj (λ s, accept A s = true) Q).
 
@@ -451,8 +452,9 @@ Proof.
 revert s; induction n; simpl; intros.
 - rewrite orb_false_r in H; apply conn, path_stop, H.
 - rewrite app_nil_r in H; apply Accepts_determine in H as [t [Hs Ht]].
-  apply can_spec, IHn in Ht as [path]. apply conn, path_step with (w:=can t).
-  apply can_spec. apply in_map, Hs. apply path.
+  apply Aut_Accepts with (f:=aut), IHn in Ht as [path].
+  apply conn, path_step with (w:=aut t).
+  apply aut_ran. apply in_map, Hs. apply path. apply aut_spec.
 Qed.
 
 Theorem retr_accept_sound n s :
@@ -472,7 +474,6 @@ induction path; simpl; b_Prop.
 now left. right; apply existsb_exists.
 apply in_map_iff in i0 as [t [R H]]; subst; exists t; split. easy.
 simpl in IHpath; b_Prop; [left|right].
-(* Again, can/Similar is too permissive to finish this proof. *)
 Admitted.
 
 Lemma retr_accept_weaken m n s :
@@ -508,9 +509,8 @@ Theorem retr_Accepts word s :
   Accepts retr word s <-> ∃n, Accepts A (word ++ repeat p n) s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
-- destruct finite as [Q [Q_len Hcan]].
-  apply sigma_function in Hcan as [can can_spec].
-  rewrite <-Q_len; eapply retr_accept_spec, can_spec.
+- destruct finite as [f [Q [Q_len [f_ran f_spec]]]].
+  rewrite <-Q_len; apply retr_accept_spec with (aut:=f); easy.
 - apply IHw.
 Qed.
 
@@ -529,11 +529,7 @@ Qed.
 Theorem retr_size :
   Finite retr size.
 Proof.
-destruct finite as [Q [Q_len can]]; exists Q; split. easy.
-intros s; destruct (can s) as [t [inQ sim]]; exists t; split. easy.
-unfold Similar in *; intros. rewrite ?retr_Accepts; apply ex_iff.
-intros; apply sim.
-Qed.
+Admitted.
 
 End Retraction.
 
@@ -556,10 +552,11 @@ Hypothesis state_dec : ∀s t : state A, {s = t} + {s ≠ t}.
 Section Connectivity_to_an_accept_state.
 
 Variable Q : list (state A).
-Variable can : state A -> state A.
-Hypothesis can_spec : ∀s, In (can s) Q /\ Similar A [s] [can s].
+Variable aut : state A -> state A.
+Hypothesis aut_ran : ∀s, In (aut s) Q.
+Hypothesis aut_spec : Automorphism A aut.
 
-Definition trans_adj s := map can (flat_map (λ c, trans A c s) alphabet).
+Definition trans_adj s := map aut (flat_map (λ c, trans A c s) alphabet).
 Definition Acceptable := Connected trans_adj (λ s, accept A s = true) Q.
 
 Theorem Acceptable_Accepts s :
@@ -569,9 +566,9 @@ intros [p]; induction p.
 - exists nil; simpl; now rewrite e.
 - apply in_map_iff in i0 as [s [R Hs]]; subst.
   apply in_flat_map in Hs as [c [_ Hc]].
-  destruct IHp as [w Hw].
-  exists (c :: w); simpl; rewrite app_nil_r.
-  eapply Accepts_subset. apply can_spec, Hw.
+  destruct IHp as [w Hw]; exists (c :: w); simpl.
+  rewrite app_nil_r; eapply Accepts_subset.
+  apply Aut_Accepts with (f:=aut), Hw; easy.
   intros s' Hs'; inv Hs'.
 Qed.
 
@@ -582,10 +579,11 @@ revert s; induction w as [|c w]; simpl; intros.
 - rewrite orb_false_r in H. now apply conn, path_stop.
 - rewrite app_nil_r in H.
   apply Accepts_determine in H as [t [Ht Hw]].
-  apply can_spec, IHw in Hw as [p].
-  apply conn, path_step with (w:=can t). apply can_spec.
+  apply Aut_Accepts with (f:=aut), IHw in Hw as [p].
+  apply conn, path_step with (w:=aut t). apply aut_ran.
   apply in_map_iff; exists t; split. easy.
   apply in_flat_map; exists c; easy. easy.
+  apply aut_spec.
 Qed.
 
 Corollary Acceptable_dec s :
@@ -598,18 +596,16 @@ Qed.
 End Connectivity_to_an_accept_state.
 
 Variable size : nat.
-Hypothesis A_size : Finite A size.
+Hypothesis finite : Finite A size.
 
 Corollary ex_Accepts_dec s :
   {∃w, Accepts A w [s]} + {∀w, ¬Accepts A w [s]}.
 Proof.
-destruct A_size as [Q [Q_len Hcan]].
-apply sigma_function in Hcan as [can can_spec].
-destruct (Acceptable_dec Q can s).
-- left. eapply Acceptable_Accepts.
-  apply can_spec. easy.
-- right; intros w. eapply contra.
-  apply Accepts_Acceptable, can_spec. easy.
+destruct finite as [f [Q [Q_len [f_ran f_aut]]]].
+destruct (Acceptable_dec Q f s).
+- left; eapply Acceptable_Accepts. apply f_aut. apply a.
+- right; intros w; eapply contra. apply Accepts_Acceptable.
+  apply f_ran. apply f_aut. easy.
 Qed.
 
 Corollary Language_inhabited_dec :

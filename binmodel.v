@@ -143,8 +143,8 @@ Section Lemmas.
 Lemma finite_type {letter} (A : automaton letter) n :
   (Σ Q, length Q = n /\ ∀s : state A, In s Q) -> Finite A n.
 Proof.
-intros [Q [Q_len Q_spec]]; exists Q; split. easy.
-intros s; exists s; easy.
+intros [Q [Q_len Q_spec]]; exists id, Q; split.
+apply Q_len. split. apply Q_spec. easy.
 Qed.
 
 Lemma finite_unit :
