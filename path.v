@@ -96,4 +96,5 @@ Qed.
 End Graph_connectivity.
 
 Arguments path {_}.
+Arguments path_length {_ _ _ _ _}.
 Arguments Connected {_}.
