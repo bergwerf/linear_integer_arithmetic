@@ -18,6 +18,20 @@ Definition BinR (a : rel_atom) (Γ : list N) :=
   | rel_le i j    => f i <= f j
   end)%N.
 
+Lemma nth_app_default {X} i l (d : X) :
+  nth i (l ++ [d]) d = nth i l d.
+Proof.
+revert l; induction i; destruct l; simpl in *; try easy.
+destruct i; reflexivity.
+Qed.
+
+Theorem BinR_default a Γ :
+  BinR a Γ <-> BinR a (Γ ++ [0%N]).
+Proof.
+destruct a; simpl;
+rewrite ?nth_app_default; easy.
+Qed.
+
 Theorem NatR_iff_BinR φ Γ :
   NatR |= (φ)[Γ] <-> BinR |= (φ)[map N.of_nat Γ].
 Proof.
@@ -304,3 +318,21 @@ all: lia.
 Qed.
 
 End Regularity_of_BinR.
+
+(* The Grande Final Theorem! *)
+Theorem Nat_dec φ :
+  {∃Γ, Nat |= (φ)[Γ]} + {∀Γ, ¬Nat |= (φ)[Γ]}.
+Proof.
+destruct convert_formula_to_rformula with (φ:=φ) as [ϕ ϕ_spec].
+destruct automatic_structure_dec with
+(default:=0%N)(decode:=bnum)(encode:=bits)(Model:=BinR)(φ:=ϕ).
+apply BinR_default.
+apply bnum_bits_id.
+apply bnum_padding.
+apply Automatic_rel_atom.
+- left; destruct e as [Γ HΓ]; exists (map N.to_nat Γ).
+  apply ϕ_spec, NatR_iff_BinR. erewrite map_map, map_ext.
+  rewrite map_id; apply HΓ. apply N2Nat.id.
+- right; intros Γ HΓ; apply n with (Γ:=map N.of_nat Γ).
+  apply NatR_iff_BinR, ϕ_spec, HΓ.
+Qed.

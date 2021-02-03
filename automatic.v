@@ -248,7 +248,7 @@ induction φ; simpl.
 Qed.
 
 Theorem Automatic_Realizes_dec φ :
-  Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.
+  Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬Model |= (φ)[Γ]}.
 Proof.
 intros [n [use reg]].
 apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
@@ -265,6 +265,13 @@ apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
   replace n with (length Δ) in No.
   + rewrite <-Hw in HΓ; apply No in HΓ; easy.
   + subst; apply firstn_length_le. rewrite app_length, repeat_length. lia.
+Qed.
+
+Corollary automatic_structure_dec φ :
+  (∀a, Automatic (wff_atom a)) ->
+  {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬Model |= (φ)[Γ]}.
+Proof.
+intros H; apply Automatic_Realizes_dec, automatic_structure, H.
 Qed.
 
 End Decide_wff_using_automata.
