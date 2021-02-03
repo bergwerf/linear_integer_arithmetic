@@ -104,26 +104,51 @@ End Preliminary_results.
 (* Existential quantification is the most involved construction. *)
 Section Regularity_of_existential_quantification.
 
-Lemma map_vhd_map2_cons {X n} hs (ts : list (Vector.t X n)) :
-  map vhd (map2 (λ h t, h ;; t) hs ts) = hs.
+Notation glue hs ts := (map2 (λ h t, h ;; t) hs ts).
+
+Lemma map_vhd_glue {X n} hs (ts : list (Vector.t X n)) :
+  length hs <= length ts -> map vhd (glue hs ts) = hs.
+Proof.
+revert ts; induction hs; destruct ts; simpl; intros; try easy.
+rewrite IHhs. easy. lia.
+Qed.
+
+Lemma map_vtl_glue {X n} hs (ts : list (Vector.t X n)) :
+  length ts <= length hs -> map vtl (glue hs ts) = ts.
+Proof.
+revert ts; induction hs; destruct ts; simpl; intros; try easy.
+rewrite IHhs. easy. lia.
+Qed.
+
+Variable n : nat.
+Notation zero := (vrepeat false n).
+Definition proj (v : vec n) := [true ;; v; false ;; v].
+
+Lemma Image_proj_map_vtl v w :
+  Automata.Image proj w v <-> map vtl v = w.
+Proof.
+unfold Automata.Image; rewrite Forall2_map; split.
+- intros H; induction H; simpl. easy. inv H; inv H1.
+- revert w; induction v; destruct w; simpl; try easy.
+  intros H; inv H; apply Forall2_cons.
+  + apply Vector.caseS' with (v0:=a); intros [] a'; auto.
+  + apply IHv; easy.
+Qed.
+
+Lemma decode_transpose_padding w k :
+  vmap decode (vmap vlist (transpose (voflist (w ++ repeat zero k)))) =
+  vmap decode (vmap vlist (transpose (voflist w))).
 Proof.
 Admitted.
 
-Lemma map_vtl_map2_cons {X n} hs (ts : list (Vector.t X n)) :
-  map vtl (map2 (λ h t, h ;; t) hs ts) = ts.
-Proof.
-Admitted.
-
-Theorem regular_ex φ n :
+Theorem regular_ex φ :
   regular (λ w : list (vec (S n)), Model |= (φ)[vctx w]) ->
   regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
 Proof.
 intros [A det size [Q [Q_len Q_spec]] dec spec].
-pose(zero := vrepeat false n);
-pose(pr (v : vec n) := [true ;; v; false ;; v]).
 eapply Regular.
 - apply Automata.pow_det
-  with (A:=Automata.sat _ (Automata.proj _ A _ pr) zero size).
+  with (A:=Automata.sat _ (Automata.proj _ A _ proj) zero size)(Q:=Q).
 - apply Automata.pow_size.
 - simpl; apply Automata.pow_dec.
 - intros; simpl.
@@ -131,44 +156,42 @@ eapply Regular.
   rewrite Automata.pow_spec, Automata.sat_spec.
   rewrite ex_iff. 2: intros; apply Automata.proj_spec. simpl.
   (* Prove specification hypotheses. *)
-  4: apply Q_spec. 3: exists Q; easy. 2: apply dec.
+  Unshelve. 2,5: apply dec. 2: exists Q. 2,3: easy.
   (* Prove correctness. *)
   split.
   + (* Given a word for φ, compute the witness. *)
     intros [k [v [Himage Hv]]]. apply spec in Hv.
     exists (decode (map Vector.hd v)).
-    unfold Automata.Image in Himage.
     erewrite wd. apply Hv. clear Hv.
-    (* Expose transposition and remove head. *)
+    (* Rewrite until decode_transpose_padding is left. *)
     unfold vctx; rewrite transpose_cons; simpl.
     rewrite vlist_cons, <-map_vlist with (f:=vhd), vlist_voflist_id.
-    apply wd, wd.
-    (* Replace (vmap vtl (voflist v)) with (voflist w ++ vrepeat zero k) *)
-    (* Show that decode erases all added zero vectors. *)
-    admit.
+    apply wd, wd; erewrite transpose_convert with (mat:=vmap _ _).
+    2: rewrite vmap_voflist, vlist_voflist_id.
+    2: apply Image_proj_map_vtl, Himage.
+    symmetry; apply decode_transpose_padding.
   + (* Given a witness, construct a word for φ. *)
     intros [x Hx].
-    pose(xw  := encode x).
-    pose(k   := length xw - length w).
-    pose(xw' := xw ++ repeat false (length w)).
-    pose(w'  := w ++ repeat zero k).
-    exists k, (map2 (λ h t, h ;; t) xw' w'); split.
+    pose(y  := encode x);
+    pose(hs := y ++ repeat false (length w - length y));
+    pose(ts := w ++ repeat zero (length y - length w));
+    exists (length y - length w), (glue hs ts); split.
     * (* Show that the word is in the image. *)
-      (* This goal should be a separate theorem. *)
-      admit.
+      apply Image_proj_map_vtl, map_vtl_glue.
+      unfold hs, y; rewrite ?app_length, ?repeat_length; lia.
     * (* Show that the word is accepted. *)
       apply spec; erewrite wd. apply Hx. clear Hx.
-      (* Expose transposition and reduce. *)
+      (* Rewrite until decode_transpose_padding is left. *)
       unfold vctx; rewrite transpose_cons; simpl.
       rewrite vlist_cons, <-map_vlist with (f:=vhd), vlist_voflist_id.
-      rewrite map_vhd_map2_cons; unfold xw', xw at 1.
+      rewrite map_vhd_glue at 1; unfold hs, y at 1.
       rewrite decode_padding, decode_encode_id; apply wd.
       erewrite transpose_convert.
-      2: rewrite vmap_voflist, map_vtl_map2_cons.
+      2: rewrite vmap_voflist, map_vtl_glue.
       2: rewrite vlist_voflist_id; reflexivity.
-      apply wd; unfold w'.
-      (* This goal is similar to an earlier one. *)
-Admitted.
+      apply wd, decode_transpose_padding.
+      all: unfold ts, hs, y; rewrite ?app_length, ?repeat_length; lia.
+Qed.
 
 End Regularity_of_existential_quantification.
 
