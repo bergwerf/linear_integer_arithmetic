@@ -17,6 +17,7 @@ Notation vlist := (Vector.to_list).
 Notation voflist := (Vector.of_list).
 Notation vrepeat := (Vector.const).
 Notation vlist_voflist_id := (Vector.to_list_of_list_opp).
+Notation "v +++ w" := (Vector.append v w) (at level 50).
 
 Notation "⟨ ⟩" := (Vector.nil _) (format "⟨ ⟩").
 Notation "h ;; t" := (Vector.cons _ h _ t)
@@ -34,7 +35,7 @@ Section Type_agnostic.
 Variable X : Type.
 Notation vec := (Vector.t X).
 
-Section Useful_lemmas.
+Section Convert.
 
 Theorem vlist_cons n hd (tl : vec n) :
   vlist (hd ;; tl) = hd :: vlist tl.
@@ -50,7 +51,32 @@ pose(Q n := λ v : Vector.t X n, P _ (h ;; v)).
 assert(QH : Q _ v) by easy; apply IHv in QH; easy.
 Qed.
 
-End Useful_lemmas.
+End Convert.
+
+Section Append.
+
+Theorem vlist_app m n (v : vec n) (w : vec m) :
+  vlist (v +++ w) = vlist v ++ vlist w.
+Proof.
+induction v; intros. easy.
+rewrite <-Vector.append_comm_cons, vlist_cons.
+simpl; rewrite vlist_cons; apply wd, IHv.
+Qed.
+
+End Append.
+
+Section Repeat.
+
+Variable c : X.
+
+Theorem vlist_vrepeat k :
+  vlist (vrepeat c k) = repeat c k.
+Proof.
+induction k; simpl. easy.
+rewrite vlist_cons, IHk; reflexivity.
+Qed.
+
+End Repeat.
 
 Section Nth.
 
@@ -86,7 +112,7 @@ Qed.
 
 End Nth.
 
-Section Mapping.
+Section Map.
 
 Variable Y : Type.
 Variable f : X -> Y.
@@ -120,7 +146,14 @@ induction l; simpl. easy.
 rewrite <-IHl; reflexivity.
 Qed.
 
-End Mapping.
+Theorem vmap2_append_vrepeat m n k (v : Vector.t (vec m) k) (c : vec n) :
+  vmap2 Vector.append v (vrepeat c k) = vmap (λ v, v +++ c) v.
+Proof.
+induction v; simpl. easy.
+rewrite <-IHv; reflexivity.
+Qed.
+
+End Map.
 
 Section Take.
 
@@ -142,7 +175,7 @@ Qed.
 
 End Take.
 
-Section Casting.
+Section Cast.
 
 Variable default : X.
 
@@ -163,13 +196,6 @@ induction n; simpl.
 easy. rewrite IHn; reflexivity.
 Qed.
 
-Lemma vlist_vrepeat n :
-  vlist (vrepeat default n) = repeat default n.
-Proof.
-induction n; simpl. easy.
-rewrite vlist_cons, IHn; reflexivity.
-Qed.
-
 Theorem vlist_cast n l :
   length l <= n -> vlist (cast n l) = l ++ repeat default (n - length l).
 Proof.
@@ -179,7 +205,7 @@ rewrite cast_nil, vlist_vrepeat; reflexivity.
 rewrite IHn. reflexivity. lia.
 Qed.
 
-End Casting.
+End Cast.
 
 End Type_agnostic.
 
@@ -288,6 +314,39 @@ Proof.
 revert mat'; revert n'; induction mat; destruct mat'; simpl; try easy.
 intros H; inv H. apply IHmat in H2.
 rewrite ?vmap_vlist_vmap2_cons; congruence.
+Qed.
+
+Theorem transpose_vrepeat_vrepeat m n c :
+  transpose (vrepeat (vrepeat c m) n) = vrepeat (vrepeat c n) m.
+Proof.
+induction n; simpl. reflexivity. rewrite IHn; clear IHn.
+induction m; simpl. reflexivity. rewrite IHm; reflexivity.
+Qed.
+
+Lemma vmap2_append_nil_l n m (mat : matrix m n) :
+  vmap2 Vector.append (vrepeat ⟨⟩ n) mat = mat.
+Proof.
+induction mat; simpl. easy.
+rewrite <-IHmat at 2; reflexivity.
+Qed.
+
+Lemma vmap2_cons_append_swap m n k hs (ts1 : matrix m n) (ts2 : matrix k n) :
+  vmap2 (λ h t, h ;; t) hs (vmap2 Vector.append ts1 ts2) =
+  vmap2 Vector.append (vmap2 (λ h t, h ;; t) hs ts1) ts2.
+Proof.
+induction ts1.
+apply Vector.case0 with (v:=ts2), Vector.case0 with (v:=hs); easy.
+apply Vector.caseS' with (v:=ts2), Vector.caseS' with (v:=hs); simpl; intros.
+rewrite IHts1; reflexivity.
+Qed.
+
+Theorem transpose_app m n k (mat : matrix m n) (mat' : matrix m k) :
+  transpose (mat +++ mat') =
+  vmap2 Vector.append (transpose mat) (transpose mat').
+Proof.
+induction mat; simpl.
+symmetry; apply vmap2_append_nil_l.
+rewrite IHmat; apply vmap2_cons_append_swap.
 Qed.
 
 End Matrix_transposition.

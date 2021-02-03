@@ -152,7 +152,12 @@ Lemma decode_transpose_padding w k :
   vmap decode (vmap vlist (transpose (voflist (w ++ repeat zero k)))) =
   vmap decode (vmap vlist (transpose (voflist w))).
 Proof.
-Admitted.
+rewrite transpose_convert with (mat':=voflist w +++ vrepeat zero k).
+2: rewrite vlist_app, ?vlist_voflist_id, vlist_vrepeat; reflexivity.
+rewrite transpose_app, transpose_vrepeat_vrepeat, vmap2_append_vrepeat.
+rewrite ?Vector.map_map; apply Vector.map_ext_in; intros v Hv.
+rewrite vlist_app, vlist_vrepeat; apply decode_repeat_padding.
+Qed.
 
 Theorem regular_ex φ :
   regular (λ w : list (vec (S n)), Model |= (φ)[vctx w]) ->
