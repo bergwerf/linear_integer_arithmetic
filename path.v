@@ -93,7 +93,7 @@ destruct (Nat.eq_dec (length Gv) 0).
     * intros w Hw; destruct (in_dec dec w (adj v)).
       right; now apply intersect_spec.
       left; now apply subtract_spec.
-Qed.
+Defined.
 
 Theorem path_remove_start G v :
   path G v -> path (remove dec v G) v.
@@ -104,7 +104,7 @@ simpl in Hw; rewrite or_remove_r in Hw; subst. apply p. easy.
 intros; destruct (dec x v).
 - right; subst; apply in_eq.
 - left; apply in_in_remove; easy.
-Qed.
+Defined.
 
 (* A path can be shortened to at most the size of the graph (PHP). *)
 Theorem short_path G v (p : path G v) :
@@ -120,7 +120,7 @@ destruct p.
   destruct path_subset with (p:=p)(H:=G) as [q q_len].
   intros; apply in_remove in H0; easy.
   exists (path_step _ v w i i0 q). simpl; lia.
-Qed.
+Defined.
 
 End Connecting_paths.
 

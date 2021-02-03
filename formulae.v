@@ -76,14 +76,11 @@ Arguments Realizes {_ _}.
 Arguments Use {_ _}.
 
 Notation model atom domain := (atom -> list domain -> Prop).
-Notation "¬` φ"            := (wff_not φ)
-                              (right associativity, at level 30, format "¬` φ").
-Notation "φ ∧` ϕ"          := (wff_and φ ϕ)
-                              (right associativity, at level 35).
-Notation "∃[ φ ]"          := (wff_ex φ)
-                              (format "∃[ φ ]").
+Notation "¬` φ" := (wff_not φ)(right associativity, at level 30, format "¬` φ").
+Notation "φ ∧` ϕ" := (wff_and φ ϕ) (right associativity, at level 35).
+Notation "∃[ φ ]" := (wff_ex φ) (format "∃[ φ ]").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A φ Γ)
-                              (at level 20, format "A  |=  ( φ )[ Γ ]").
+  (at level 20, format "A  |=  ( φ )[ Γ ]").
 
 Section Facts_about_realization.
 
@@ -242,7 +239,7 @@ revert j n; induction x; intros.
     apply Hϕ1 in H1; rewrite eval_shift_vars in H1;
     apply Hϕ2 in H2; rewrite eval_shift_vars in H2; simpl in *.
     rewrite ?eval_shift_vars; congruence.
-Qed.
+Defined.
 
 Lemma reduce_la_eq x y Γ :
   Nat |= (la_eq x y)[Γ] <-> 
@@ -291,7 +288,7 @@ destruct a.
   eexists; symmetry; etransitivity. apply reduce_la_le.
   apply Realizes_ex, Realizes_ex, Realizes_and.
   apply la_le_iff_rel_le. apply Realizes_and; easy.
-Qed.
+Defined.
 
 Corollary convert_formula_to_rformula φ :
   Σ ϕ, ∀Γ, NatR |= (ϕ)[Γ] <-> Nat |= (φ)[Γ].
@@ -306,6 +303,6 @@ induction φ.
 - destruct IHφ as [ϕ H].
   exists ∃[ϕ]; split;
   intros [x Hx]; exists x; apply H, Hx.
-Qed.
+Defined.
 
 End Embedding_of_formula_in_rformula.

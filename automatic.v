@@ -209,7 +209,7 @@ eapply Regular.
       2: rewrite vlist_voflist_id; reflexivity.
       apply wd, decode_transpose_padding.
       all: unfold ts, hs, y; rewrite ?app_length, ?repeat_length; lia.
-Qed.
+Defined.
 
 End Regularity_of_existential_quantification.
 
@@ -245,7 +245,7 @@ induction φ; simpl.
     exists n; split.
     apply Use_ex, use.
     apply regular_ex, reg.
-Qed.
+Defined.
 
 Theorem Automatic_Realizes_dec φ :
   Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬Model |= (φ)[Γ]}.
@@ -265,14 +265,14 @@ apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
   replace n with (length Δ) in No.
   + rewrite <-Hw in HΓ; apply No in HΓ; easy.
   + subst; apply firstn_length_le. rewrite app_length, repeat_length. lia.
-Qed.
+Defined.
 
 Corollary automatic_structure_dec φ :
   (∀a, Automatic (wff_atom a)) ->
   {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬Model |= (φ)[Γ]}.
 Proof.
 intros H; apply Automatic_Realizes_dec, automatic_structure, H.
-Qed.
+Defined.
 
 End Decide_wff_using_automata.
 

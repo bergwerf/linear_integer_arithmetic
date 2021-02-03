@@ -159,28 +159,28 @@ Lemma finite_unit :
 Proof.
 exists [tt]. split. easy.
 intros []; apply in_eq.
-Qed.
+Defined.
 
 Lemma finite_bool :
   Σ Q, length Q = 2 /\ ∀b : bool, In b Q.
 Proof.
 exists [true; false]. split. easy.
 intros []; simpl; auto.
-Qed.
+Defined.
 
 Lemma option_unit_dec (s t : option unit) :
   {s = t} + {s ≠ t}.
 Proof.
 destruct s as [[]|], t as [[]|].
 1,4: now left. all: now right.
-Qed.
+Defined.
 
 Lemma option_bool_dec (s t : option bool) :
   {s = t} + {s ≠ t}.
 Proof.
 destruct s as [[]|], t as [[]|].
 1,5,9: now left. all: now right.
-Qed.
+Defined.
 
 End Lemmas.
 
@@ -219,7 +219,7 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 - intros; apply dfa_zero_spec.
 - intros; simpl. erewrite <-(fin_spec i i) at 2.
   rewrite vctx_nth; reflexivity. easy.
-Qed.
+Defined.
 
 Lemma regular_rel_one i :
   regular (λ w : list (vec (S i)),
@@ -234,7 +234,7 @@ eapply regular_ext. eapply regular_proj. eapply Regular.
 - intros; apply dfa_one_spec.
 - intros; simpl. rewrite <-(fin_spec i i) at 2.
   rewrite vctx_nth; reflexivity. easy.
-Qed.
+Defined.
 
 Lemma regular_rel_eq i j :
   regular (λ w : list (vec (1 + max i j)),
@@ -252,7 +252,7 @@ eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j).
   rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
-Qed.
+Defined.
 
 Lemma regular_rel_le i j :
   regular (λ w : list (vec (1 + max i j)),
@@ -269,7 +269,7 @@ eapply Regular with (r_dfa:=dfa_le).
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j).
   rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
-Qed.
+Defined.
 
 Lemma regular_rel_add i j k :
   regular (λ w : list (vec (1 + max (max i j) k)),
@@ -288,7 +288,7 @@ eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j), <-(fin_spec n k).
   rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
-Qed.
+Defined.
 
 Lemma nth_firstn {X} i n l (d : X) :
   i < n -> nth i (firstn n l) d = nth i l d.
@@ -315,24 +315,75 @@ all: split.
 all: rewrite Nat.add_comm; intros Γ; simpl.
 all: rewrite ?nth_firstn; try easy.
 all: lia.
-Qed.
+Defined.
 
 End Regularity_of_BinR.
+
+Theorem BinR_dec φ :
+  {∃Γ, BinR |= (φ)[Γ]} + {∀Γ, ¬BinR |= (φ)[Γ]}.
+Proof.
+apply automatic_structure_dec with (default:=0%N)(decode:=bnum)(encode:=bits).
+apply BinR_default.
+apply bnum_bits_id.
+apply bnum_padding.
+apply Automatic_rel_atom.
+Defined.
 
 (* The Grande Final Theorem! *)
 Theorem Nat_dec φ :
   {∃Γ, Nat |= (φ)[Γ]} + {∀Γ, ¬Nat |= (φ)[Γ]}.
 Proof.
 destruct convert_formula_to_rformula with (φ:=φ) as [ϕ ϕ_spec].
-destruct automatic_structure_dec with
-(default:=0%N)(decode:=bnum)(encode:=bits)(Model:=BinR)(φ:=ϕ).
-apply BinR_default.
-apply bnum_bits_id.
-apply bnum_padding.
-apply Automatic_rel_atom.
+destruct BinR_dec with (φ:=ϕ).
 - left; destruct e as [Γ HΓ]; exists (map N.to_nat Γ).
   apply ϕ_spec, NatR_iff_BinR. erewrite map_map, map_ext.
   rewrite map_id; apply HΓ. apply N2Nat.id.
 - right; intros Γ HΓ; apply n with (Γ:=map N.of_nat Γ).
   apply NatR_iff_BinR, ϕ_spec, HΓ.
+Defined.
+
+Section Evaluation.
+
+Notation "φ ∨` ϕ" := (¬`(¬`φ ∧` ¬`ϕ)) (at level 35).
+Notation "φ ⟹ ϕ" := (¬`(φ ∧` ¬`ϕ)) (at level 40).
+Notation "∀[ φ ]" := (¬`∃[¬`φ]) (format "∀[ φ ]").
+Notation "i =` j" := (wff_atom (rel_eq i j)) (at level 25).
+Notation "i ≤` j" := (wff_atom (rel_le i j)) (at level 25).
+Notation Zero i   := (wff_atom (rel_zero i)).
+Notation One i    := (wff_atom (rel_one i)).
+Notation decide φ := (if BinR_dec φ then true else false).
+
+(*
+Evaluation
+----------
+It is possible to evaluate the decision procedure, but it is extremely slow! The
+decision itself takes place in Set and can be evaluated, but I do not know how
+to retrieve the actual witness in Prop.
+
+Here are two examples of very trivial valid formulae in the relational language
+that can be decided within a few seconds.
+```
+Compute decide ∃[One 0].
+Compute decide ∀[0 ≤` 0].
+```
+
+But even slightly non-trivial examples become unfeasible. I did not have the
+patience to let the following ones finish.
+```
+Compute decide ∃[Zero 0 ∧` One 0].
+Compute decide ∃[Zero 0 ∧` ∃[0 ≤` 1]].
+Compute decide ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ⟹ 0 =` 1]].
+```
+
+The terrible performance is of course entirely to blame on this implementation.
+There exist efficient implementations of this decision procedure which could
+easily evaluate the above examples.
+*)
+
+Example decide_a_formula_by_computation :
+  decide ∀[0 ≤` 0] = true.
+Proof.
+vm_compute; reflexivity.
 Qed.
+
+End Evaluation.

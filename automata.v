@@ -42,13 +42,6 @@ Proof.
 now induction w.
 Qed.
 
-Theorem Accepts_dec w s :
-  {Accepts w s} + {¬Accepts w s}.
-Proof.
-revert s; induction w; simpl; intros.
-apply bool_dec. apply IHw.
-Qed.
-
 Theorem Accepts_subset w s1 s2 :
   (∀s, In s s1 -> In s s2) -> Accepts w s1 -> Accepts w s2.
 Proof.
@@ -153,7 +146,7 @@ intros [Q [Q_len Q_spec]] [R [R_len R_spec]].
 exists (list_prod Q R); split.
 - simpl; rewrite prod_length, Q_len, R_len; reflexivity.
 - intros [sa sb]; apply in_prod; easy.
-Qed.
+Defined.
 
 End Product.
 
@@ -241,7 +234,7 @@ exists (map pow_norm (powerset Q)); split.
 - intros [s H]; apply in_map_iff; exists s; split.
   + apply pow_state_eq; apply H.
   + rewrite <-H; apply normalize_spec.
-Qed.
+Defined.
 
 Theorem pow_dec (s t : pow_state) :
   {s = t} + {s ≠ t}.
@@ -249,7 +242,7 @@ Proof.
 edestruct list_eq_dec. apply dec.
 - left; apply pow_state_eq, e.
 - right; intros H; subst; easy.
-Qed.
+Defined.
 
 End Powerset.
 
@@ -311,7 +304,7 @@ Proof.
 intros [Q [Q_len Q_spec]]; exists (None :: map Some Q); split.
 - simpl; rewrite map_length, Q_len; reflexivity.
 - intros [s|]. apply in_cons, in_map, Q_spec. apply in_eq.
-Qed.
+Defined.
 
 End Option.
 
@@ -543,19 +536,19 @@ revert s; induction w as [|c w]; simpl; intros.
   apply in_flat_map; exists c; easy. easy.
 Qed.
 
-Corollary Acceptable_dec s :
+Theorem Acceptable_dec s :
   {Acceptable s} + {¬Acceptable s}.
 Proof.
 apply Connected_dec. apply state_dec.
 intros v; destruct (accept A v); auto.
-Qed.
+Defined.
 
 End Connectivity_to_an_accept_state.
 
 Variable size : nat.
 Hypothesis finite : Finite A size.
 
-Corollary ex_Accepts_dec s :
+Theorem Accepts_inhabited_dec s :
   {∃w, Accepts A w [s]} + {∀w, ¬Accepts A w [s]}.
 Proof.
 destruct finite as [Q [_ Q_spec]].
@@ -563,12 +556,12 @@ destruct (Acceptable_dec Q s).
 - left; eapply Acceptable_Accepts, a.
 - right; intros w; eapply contra. apply Accepts_Acceptable.
   apply Q_spec. easy.
-Qed.
+Defined.
 
 Corollary Language_inhabited_dec :
   {∃w, Language A w} + {∀w, ¬Language A w}.
 Proof.
-apply ex_Accepts_dec.
-Qed.
+apply Accepts_inhabited_dec.
+Defined.
 
 End Decidability.
