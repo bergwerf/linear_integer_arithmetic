@@ -149,7 +149,11 @@ Qed.
 Theorem prod_size m n :
   Finite A m -> Finite B n -> Finite prod (m * n).
 Proof.
-Admitted.
+intros [Q [Q_len Q_spec]] [R [R_len R_spec]].
+exists (list_prod Q R); split.
+- simpl; rewrite prod_length, Q_len, R_len; reflexivity.
+- intros [sa sb]; apply in_prod; easy.
+Qed.
 
 End Product.
 
@@ -304,7 +308,10 @@ Qed.
 Theorem opt_size n :
   Finite A n -> Finite opt (S n).
 Proof.
-Admitted.
+intros [Q [Q_len Q_spec]]; exists (None :: map Some Q); split.
+- simpl; rewrite map_length, Q_len; reflexivity.
+- intros [s|]. apply in_cons, in_map, Q_spec. apply in_eq.
+Qed.
 
 End Option.
 
@@ -337,11 +344,6 @@ Theorem compl_det :
 Proof.
 easy.
 Qed.
-
-Theorem compl_size n :
-  Finite A n -> Finite compl n.
-Proof.
-Admitted.
 
 End Complementation.
 
@@ -395,11 +397,6 @@ intros det Hc c s. simpl; unfold proj_trans.
 destruct (list_singleton _ (Hc c));
 rewrite H; simpl; rewrite app_nil_r. apply det.
 Qed.
-
-Theorem proj_size n :
-  Finite A n -> Finite proj n.
-Proof.
-Admitted.
 
 End Projection.
 
@@ -491,17 +488,6 @@ Corollary retr_spec word :
 Proof.
 apply retr_Accepts.
 Qed.
-
-Theorem retr_det :
-  Deterministic A -> Deterministic retr.
-Proof.
-easy.
-Qed.
-
-Theorem retr_size :
-  Finite retr size.
-Proof.
-Admitted.
 
 End Retraction.
 
