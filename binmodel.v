@@ -44,7 +44,7 @@ apply similar_models; clear Γ.
       now rewrite Nat2N.inj_compare.
 Qed.
 
-Section Relational_formulae_are_regular.
+Section Regularity_of_BinR.
 
 Notation ctx := (vctx _ bnum).
 Notation iffb := (Bool.eqb).
@@ -303,4 +303,4 @@ all: rewrite ?nth_firstn; try easy.
 all: lia.
 Qed.
 
-End Relational_formulae_are_regular.
+End Regularity_of_BinR.
