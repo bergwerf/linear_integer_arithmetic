@@ -95,7 +95,7 @@ destruct (Nat.eq_dec (length Gv) 0).
       left; now apply subtract_spec.
 Qed.
 
-Theorem path_pop G v :
+Theorem path_remove_start G v :
   path G v -> path (remove dec v G) v.
 Proof.
 intros p; apply path_split with (Ga:=remove dec v G)(Gb:=[v]) in p.
@@ -116,7 +116,7 @@ destruct p.
 - exists (path_stop _ _ e); simpl; lia.
 - assert(length (remove dec w G) < n).
   rewrite <-G_size; apply remove_length_lt, i.
-  eapply path_pop, IH in p as [p Hp]. 3: reflexivity. 2: easy.
+  eapply path_remove_start, IH in p as [p Hp]. 3: reflexivity. 2: easy.
   destruct path_subset with (p:=p)(H:=G) as [q q_len].
   intros; apply in_remove in H0; easy.
   exists (path_step _ v w i i0 q). simpl; lia.

@@ -127,7 +127,7 @@ eapply Regular.
 - apply Automata.pow_size.
 - simpl; apply Automata.pow_dec.
 - intros; simpl.
-  (* Transform into automaton specification. *)
+  (* Rewrite specification. *)
   rewrite Automata.pow_spec, Automata.sat_spec.
   rewrite ex_iff. 2: intros; apply Automata.proj_spec. simpl.
   (* Prove specification hypotheses. *)
