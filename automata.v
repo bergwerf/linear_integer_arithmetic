@@ -1,6 +1,6 @@
 (* Basic theory of automata. *)
 
-Require Import Utf8 Bool PeanoNat List Lia.
+Require Import Utf8 Bool PeanoNat List Lia Eqdep_dec.
 From larith Require Import tactics notations utilities path.
 Import ListNotations.
 
@@ -219,10 +219,33 @@ Proof.
 easy.
 Qed.
 
+(* I do not know what magic makes this work, but I am happy it does! *)
+Lemma pow_state_eq (s s' : pow_state) :
+  projT1 s = projT1 s' -> s = s'.
+Proof.
+destruct s, s'; simpl; intros; subst. replace e with e0. easy.
+apply eq_proofs_unicity_on.
+intros; edestruct list_eq_dec. apply dec.
+left; apply e1. now right.
+Qed.
+
 Theorem pow_size :
   Finite pow (2^length Q).
 Proof.
-Admitted.
+exists (map pow_norm (powerset Q)); split.
+- rewrite map_length; apply powerset_length.
+- intros [s H]; apply in_map_iff; exists s; split.
+  + apply pow_state_eq; apply H.
+  + rewrite <-H; apply normalize_spec.
+Qed.
+
+Theorem pow_dec (s t : pow_state) :
+  {s = t} + {s ≠ t}.
+Proof.
+edestruct list_eq_dec. apply dec.
+- left; apply pow_state_eq, e.
+- right; intros H; subst; easy.
+Qed.
 
 End Powerset.
 
