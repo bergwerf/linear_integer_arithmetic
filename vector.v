@@ -215,7 +215,6 @@ Variable X : Type.
 Notation vec := (Vector.t X).
 Notation matrix m n := (Vector.t (vec m) n).
 
-(* Convert from a list of collumn vectors to a vector of row lists. *)
 Fixpoint transpose {m n} (mat : matrix m n) : matrix n m :=
   match mat with
   | ⟨⟩     => vrepeat ⟨⟩ m
