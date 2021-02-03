@@ -267,17 +267,6 @@ induction u; simpl. easy.
 now rewrite Nat.add_0_r, app_length, map_length, ?IHu.
 Qed.
 
-Theorem powerset_trans u l x :
-  In x l -> In l (powerset u) -> In x u.
-Proof.
-revert l; induction u; simpl; intros l H' H.
-- destruct H; subst; easy.
-- destruct (dec a x). now left. right.
-  apply in_app_or in H as [H|H]. now apply IHu in H.
-  apply in_map_iff in H as [l' [eq_l H]]; subst.
-  inv H'. now apply IHu in H.
-Qed.
-
 Theorem normalize_spec u l :
   In (normalize u l) (powerset u).
 Proof.

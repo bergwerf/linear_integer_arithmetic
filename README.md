@@ -26,9 +26,14 @@ formulae into a language with an addition relation `A(x, y, z) <-> x + y = z`
 and the usual equality and inequality relations. It should be straightforward to
 apply the automata-based decision method to these formulae.
 
-### 2.1. Basic optimizations.
+### 2.2. A generalization.
+Presburger arithmetic can be generalized to the so-called "Weak Monadic Logic of
+One Successor". A course at EPFL from 2008 explains the details quite well [3].
+The construction presented there also covers some of the subtle proof details.
+
+### 2.3. Basic optimizations.
 The most important optimization is using more sophisticated automata that 
-represent Diophantine equations, as shown in [3]. It is still unclear if a 
+represent Diophantine equations, as shown in [4]. It is still unclear if a 
 verified implementation of this algorithm in Coq will be efficient enough to 
 compute actual examples (the theoretical nature of Coq is a severe limitation 
 for computation efficiency).
@@ -36,4 +41,5 @@ for computation efficiency).
 
 [1]: https://dl.acm.org/doi/10.1145/3242953.3242964
 [2]: https://dl.acm.org/doi/10.1145/800133.804361
-[3]: https://link.springer.com/chapter/10.1007/3-540-61064-2_27
+[3]: https://lara.epfl.ch/w/sav08/using_automata_to_decide_ws1s
+[4]: https://link.springer.com/chapter/10.1007/3-540-61064-2_27

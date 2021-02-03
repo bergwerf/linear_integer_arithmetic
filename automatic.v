@@ -98,13 +98,13 @@ Lemma regular_ex φ n :
 Proof.
 intros [A det size [Q [_ Q_spec]] dec spec].
 pose(pr (v : vec n) := [true ;; v; false ;; v]).
-(* We may first need to construct the state space.
 eapply Regular.
 - apply Automata.pow_det.
-- apply Automata.pow_size, Automata.proj_size with (pr:=pr), fin. apply dec.
-- simpl; apply list_eq_dec, dec.
+- apply Automata.pow_size.
+- simpl; apply Automata.pow_dec.
 - intros; simpl.
-  rewrite Automata.pow_spec, Automata.proj_spec; split.
+  rewrite Automata.pow_spec, Automata.proj_spec with (pr:=pr).
+  2: apply Q_spec. split.
   + (* Given a word for φ, compute the witness. *)
     intros [v [Himage Hv]]. apply spec in Hv.
     exists (decode (map Vector.hd v)).
@@ -124,17 +124,11 @@ eapply Regular.
     pose(xw' := xw ++ repeat false (length w)).
     pose(w'  := w ++ repeat (vrepeat false n) (length xw)).
     exists (map2 (λ h t, h ;; t) xw' w').
-    (* Now we run into a problem! *)
     (*
-    The current chain of definitions requires us to give an accepting word of
-    length w. But it is possible that the witness is longer than any of the
-    other context variables, in which case the word needs additional padding.
-    I looked through various publications to find a solution for this problem,
-    but most of them don't go into detail regarding the construction. However,
-    it seems that a course at EPFL from 2008 deals with precisely this issue:
-    https://lara.epfl.ch/w/sav08/using_automata_to_decide_ws1s
+    To extend the word with zeros (space that the witness might need to finish),
+    we have to close the accept states under final zero transitions. This is
+    possible with the saturation construction (Automata.sat).
     *)
-*)
 Admitted.
 
 Theorem automatic_structure φ :

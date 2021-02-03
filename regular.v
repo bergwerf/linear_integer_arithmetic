@@ -59,7 +59,7 @@ intros [A det size fin dec spec] H.
 pose(B := Automata.proj _ A _ (λ c, [pr c])).
 eapply Regular with (r_dfa:=B).
 - apply Automata.proj_det; easy.
-- apply Automata.proj_size, fin.
+- apply fin.
 - apply dec.
 - intros. rewrite <-H, <-spec.
   unfold B; rewrite Automata.proj_spec.
@@ -92,7 +92,7 @@ Proof.
 intros [A det size fin dec spec].
 eapply Regular with (r_dfa:=Automata.compl _ A).
 - apply Automata.compl_det, det.
-- now apply Automata.compl_size, fin.
+- apply fin.
 - apply dec.
 - intros. rewrite Automata.compl_spec.
   split; apply contra, spec. easy.

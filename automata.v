@@ -401,15 +401,15 @@ Qed.
 End Projection.
 
 (* Remove a suffix of padding-symbols using 'early accept' states. *)
-Section Retraction.
+Section Saturation.
 
 Variable A : automaton letter.
 Variable p : letter.
 
-Fixpoint retr_accept n s : bool :=
+Fixpoint sat_accept n s : bool :=
   match n with
   | 0 => false
-  | S m => accept A s || existsb (retr_accept m) (trans A p s)
+  | S m => accept A s || existsb (sat_accept m) (trans A p s)
   end.
 
 (* Define early accept states using graph connectivity. *)
@@ -430,8 +430,8 @@ revert s; induction n; simpl; intros.
   apply IHn in Ht as [path]. apply conn, path_step with (w:=t); easy.
 Qed.
 
-Theorem retr_accept_sound n s :
-  retr_accept n s = true -> ∃n, Accepts A (repeat p n) [s].
+Theorem sat_accept_sound n s :
+  sat_accept n s = true -> ∃n, Accepts A (repeat p n) [s].
 Proof.
 revert s; induction n; simpl; intros. easy. b_Prop.
 - exists 0; simpl. rewrite e; easy.
@@ -440,13 +440,13 @@ revert s; induction n; simpl; intros. easy. b_Prop.
   rewrite app_nil_r; apply Accepts_determine; exists t; easy.
 Qed.
 
-Theorem retr_accept_complete s (path : suffix_path s) :
-  retr_accept (1 + path_length path) s = true.
+Theorem sat_accept_complete s (path : suffix_path s) :
+  sat_accept (1 + path_length path) s = true.
 Proof.
 Admitted.
 
-Lemma retr_accept_weaken m n s :
-  retr_accept m s = true -> m <= n -> retr_accept n s = true.
+Lemma sat_accept_weaken m n s :
+  sat_accept m s = true -> m <= n -> sat_accept n s = true.
 Proof.
 revert n s; induction m; simpl; intros.
 easy. destruct n; simpl. easy. b_Prop. now left. right.
@@ -454,17 +454,17 @@ apply existsb_exists in e as [t H]; apply existsb_exists; exists t.
 split. easy. apply IHm. easy. lia.
 Qed.
 
-Theorem retr_accept_spec s :
-  existsb (retr_accept (1 + length Q)) s = true <->
+Theorem sat_accept_spec s :
+  existsb (sat_accept (1 + length Q)) s = true <->
   ∃n, Accepts A (repeat p n) s.
 Proof.
 rewrite existsb_exists; split; intros [i H].
-- destruct H as [Hs Hi]. apply retr_accept_sound in Hi as [n Hn]; exists n.
+- destruct H as [Hs Hi]. apply sat_accept_sound in Hi as [n Hn]; exists n.
   apply Accepts_determine; exists i; easy.
 - apply Accepts_determine in H as [t [Hs Ht]]; exists t; split. easy.
   apply Early_accept_complete in Ht as [path].
   apply short_path in path as [spath H].
-  eapply retr_accept_weaken. apply retr_accept_complete. apply le_n_S, H.
+  eapply sat_accept_weaken. apply sat_accept_complete. apply le_n_S, H.
 Admitted.
 
 End Early_accept_states.
@@ -472,24 +472,24 @@ End Early_accept_states.
 Variable size : nat.
 Hypothesis finite : Finite A size.
 
-Definition retr := Automaton _ _ (start A) (retr_accept (S size)) (trans A).
+Definition sat := Automaton _ _ (start A) (sat_accept (S size)) (trans A).
 
-Theorem retr_Accepts word s :
-  Accepts retr word s <-> ∃n, Accepts A (word ++ repeat p n) s.
+Theorem sat_Accepts word s :
+  Accepts sat word s <-> ∃n, Accepts A (word ++ repeat p n) s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
 - destruct finite as [Q [Q_len Q_spec]].
-  rewrite <-Q_len; apply retr_accept_spec; easy.
+  rewrite <-Q_len; apply sat_accept_spec; easy.
 - apply IHw.
 Qed.
 
-Corollary retr_spec word :
-  Language retr word <-> ∃n, Language A (word ++ repeat p n).
+Corollary sat_spec word :
+  Language sat word <-> ∃n, Language A (word ++ repeat p n).
 Proof.
-apply retr_Accepts.
+apply sat_Accepts.
 Qed.
 
-End Retraction.
+End Saturation.
 
 End Constructions.
 
