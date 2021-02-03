@@ -47,13 +47,6 @@ Proof.
 destruct P_dec; auto.
 Qed.
 
-Theorem and_dec :
-  {P /\ Q} + {¬(P /\ Q)}.
-Proof.
-destruct P_dec, Q_dec.
-now left. all: now right.
-Qed.
-
 End Propositions.
 
 Section Predicates.
@@ -67,12 +60,6 @@ Proof.
 intros H; split; intros [x Hx]; exists x; apply H, Hx.
 Qed.
 
-Lemma eq_iff (a b c : X) :
-  a = b -> a = c <-> b = c.
-Proof.
-intros; subst; easy.
-Qed.
-
 End Predicates.
 
 End Laws_of_logic.
@@ -81,18 +68,6 @@ End Laws_of_logic.
 (* II. Various list utilities.                                                *)
 (******************************************************************************)
 Module ListUtils.
-
-Theorem list_prod_nil_r {X Y} (l : list X) :
-  @list_prod X Y l nil = nil.
-Proof.
-now induction l.
-Qed.
-
-Theorem list_prod_single {X Y} (x : X) (y : Y) :
-  [(x, y)] = list_prod [x] [y].
-Proof.
-easy.
-Qed.
 
 Theorem list_singleton {X} (l : list X) :
   length l = 1 -> ∃x, l = [x].
@@ -103,15 +78,6 @@ Qed.
 
 Notation lmax l := (fold_right max 0 l).
 
-Section Maximum.
-
-Theorem lmax_app l l' :
-  lmax (l ++ l') = max (lmax l) (lmax l').
-Proof.
-induction l; simpl. easy.
-rewrite IHl; lia.
-Qed.
-
 Theorem lmax_in n l :
   In n l -> n <= lmax l.
 Proof.
@@ -119,8 +85,6 @@ induction l; simpl. easy.
 intros [H|H]. subst. lia.
 apply IHl in H. lia.
 Qed.
-
-End Maximum.
 
 Section Forall2.
 
