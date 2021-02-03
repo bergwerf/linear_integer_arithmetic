@@ -405,6 +405,7 @@ Section Saturation.
 
 Variable A : automaton letter.
 Variable p : letter.
+Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
 Fixpoint sat_accept n s : bool :=
   match n with
@@ -443,7 +444,9 @@ Qed.
 Theorem sat_accept_complete s (path : suffix_path s) :
   sat_accept (1 + path_length path) s = true.
 Proof.
-Admitted.
+induction path; simpl. now rewrite e.
+b_Prop; right. apply existsb_exists; exists w; easy.
+Qed.
 
 Lemma sat_accept_weaken m n s :
   sat_accept m s = true -> m <= n -> sat_accept n s = true.
@@ -464,8 +467,9 @@ rewrite existsb_exists; split; intros [i H].
 - apply Accepts_determine in H as [t [Hs Ht]]; exists t; split. easy.
   apply Early_accept_complete in Ht as [path].
   apply short_path in path as [spath H].
-  eapply sat_accept_weaken. apply sat_accept_complete. apply le_n_S, H.
-Admitted.
+  eapply sat_accept_weaken. apply sat_accept_complete.
+  apply le_n_S, H. apply dec.
+Qed.
 
 End Early_accept_states.
 
