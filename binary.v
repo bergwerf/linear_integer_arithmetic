@@ -38,12 +38,11 @@ induction p; simpl.
 1,2: rewrite IHp. all: easy.
 Qed.
 
-Theorem bnum_padding b k :
-  bnum (b ++ repeat false k) = bnum b.
+Theorem bnum_padding b :
+  bnum (b ++ [false]) = bnum b.
 Proof.
 induction b; simpl.
-- induction k; simpl. easy. now rewrite IHk.
-- now rewrite IHb.
+easy. now rewrite IHb.
 Qed.
 
 Theorem bnum_cons x xs :

@@ -105,14 +105,14 @@ Notation lmax l := (fold_right max 0 l).
 
 Section Maximum.
 
-Lemma lmax_app l l' :
+Theorem lmax_app l l' :
   lmax (l ++ l') = max (lmax l) (lmax l').
 Proof.
 induction l; simpl. easy.
 rewrite IHl; lia.
 Qed.
 
-Lemma lmax_in n l :
+Theorem lmax_in n l :
   In n l -> n <= lmax l.
 Proof.
 induction l; simpl. easy.

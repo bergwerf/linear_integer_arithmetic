@@ -32,14 +32,13 @@ Section Decide_wff_using_automata.
 
 Variable atom domain : Type.
 Variable Model : model atom domain.
+Variable default : domain.
+Hypothesis default_spec : ∀a Γ, Model a Γ <-> Model a (Γ ++ [default]).
 
 Variable decode : list bool -> domain.
 Variable encode : domain -> list bool.
 Hypothesis decode_encode_id : ∀x, decode (encode x) = x.
-Hypothesis decode_padding : ∀l n, decode (l ++ repeat false n) = decode l.
-
-Variable default : domain.
-Hypothesis default_spec : ∀a Γ, Model a Γ <-> Model a (Γ ++ [default]).
+Hypothesis decode_padding : ∀l, decode (l ++ [false]) = decode l.
 
 Definition vctx {n} (w : list (vec n)) : list domain :=
   vlist (vmap decode (vmap vlist (transpose (voflist w)))).
@@ -47,7 +46,31 @@ Definition vctx {n} (w : list (vec n)) : list domain :=
 Definition Automatic φ := Σ n, Use Model φ n ×
   regular (λ w : list (vec n), Model |= (φ)[vctx w]).
 
-Section Preliminary_results.
+Section Useful_lemmas.
+
+Theorem Realizes_ctx_default φ Γ :
+  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
+Proof.
+revert Γ; induction φ; simpl; intros.
+- apply default_spec.
+- split; apply contra, IHφ.
+- split. all: split; [apply (IHφ1 Γ)|apply (IHφ2 Γ)]; apply H.
+- split; intros [x Hx]; exists x; apply (IHφ (x :: Γ)), Hx.
+Qed.
+
+Theorem Realizes_ctx_repeat_default φ Γ n :
+  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ repeat default n].
+Proof.
+induction n; simpl. now rewrite app_nil_r.
+rewrite repeat_cons, IHn, app_assoc. apply Realizes_ctx_default.
+Qed.
+
+Theorem decode_repeat_padding l k :
+  decode (l ++ repeat false k) = decode l.
+Proof.
+induction k; simpl. now rewrite app_nil_r.
+rewrite repeat_cons, app_assoc, decode_padding, IHk; reflexivity.
+Qed.
 
 Theorem vctx_nil (w : list (vec 0)) :
   vctx w = [].
@@ -77,29 +100,19 @@ Theorem vctx_surj Γ :
   ∃w : list (vec (length Γ)), vctx w = Γ.
 Proof.
 pose(binary := vmap encode (voflist Γ)).
-pose(maxlen := lmax (map (@length _) (vlist binary))).
+pose(maxlen := lmax (map (@length _) (map encode Γ))).
 pose(matrix := vmap (cast false maxlen) binary).
-exists (vlist (transpose matrix)).
-Admitted.
-
-Theorem Realizes_ctx_default φ Γ :
-  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
-Proof.
-revert Γ; induction φ; simpl; intros.
-- apply default_spec.
-- split; apply contra, IHφ.
-- split. all: split; [apply (IHφ1 Γ)|apply (IHφ2 Γ)]; apply H.
-- split; intros [x Hx]; exists x; apply (IHφ (x :: Γ)), Hx.
+exists (vlist (transpose matrix)); unfold vctx.
+apply voflist_vlist_id; rewrite transpose_transpose_id.
+unfold matrix, binary; rewrite <-?map_vlist, vlist_voflist_id.
+erewrite ?map_map, map_ext_in. apply map_id.
+(* Show that casting did not change the value. *)
+intros x Hx; simpl. rewrite vlist_cast.
+rewrite decode_repeat_padding; apply decode_encode_id.
+apply lmax_in, in_map, in_map, Hx.
 Qed.
 
-Corollary Realizes_ctx_repeat_default φ Γ n :
-  Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ repeat default n].
-Proof.
-induction n; simpl. now rewrite app_nil_r.
-rewrite repeat_cons, IHn, app_assoc. apply Realizes_ctx_default.
-Qed.
-
-End Preliminary_results.
+End Useful_lemmas.
 
 (* Existential quantification is the most involved construction. *)
 Section Regularity_of_existential_quantification.
@@ -185,7 +198,7 @@ eapply Regular.
       unfold vctx; rewrite transpose_cons; simpl.
       rewrite vlist_cons, <-map_vlist with (f:=vhd), vlist_voflist_id.
       rewrite map_vhd_glue at 1; unfold hs, y at 1.
-      rewrite decode_padding, decode_encode_id; apply wd.
+      rewrite decode_repeat_padding, decode_encode_id; apply wd.
       erewrite transpose_convert.
       2: rewrite vmap_voflist, map_vtl_glue.
       2: rewrite vlist_voflist_id; reflexivity.

@@ -34,15 +34,23 @@ Section Type_agnostic.
 Variable X : Type.
 Notation vec := (Vector.t X).
 
-Section Lemmas.
+Section Useful_lemmas.
 
-Lemma vlist_cons n hd (tl : vec n) :
+Theorem vlist_cons n hd (tl : vec n) :
   vlist (hd ;; tl) = hd :: vlist tl.
 Proof.
 easy.
 Qed.
 
-End Lemmas.
+Theorem voflist_vlist_id n (P : ∀n, Vector.t X n -> Prop) (v : Vector.t X n) :
+  P _ v -> P _ (voflist (vlist v)).
+Proof.
+revert P; induction v; intros. easy.
+pose(Q n := λ v : Vector.t X n, P _ (h ;; v)).
+assert(QH : Q _ v) by easy; apply IHv in QH; easy.
+Qed.
+
+End Useful_lemmas.
 
 Section Nth.
 
@@ -148,6 +156,29 @@ Fixpoint cast n (l : list X) : vec n :=
     end
   end.
 
+Theorem cast_nil n :
+  cast n [] = vrepeat default n.
+Proof.
+induction n; simpl.
+easy. rewrite IHn; reflexivity.
+Qed.
+
+Lemma vlist_vrepeat n :
+  vlist (vrepeat default n) = repeat default n.
+Proof.
+induction n; simpl. easy.
+rewrite vlist_cons, IHn; reflexivity.
+Qed.
+
+Theorem vlist_cast n l :
+  length l <= n -> vlist (cast n l) = l ++ repeat default (n - length l).
+Proof.
+revert l; induction n; destruct l; simpl; try easy.
+all: intros; rewrite vlist_cons.
+rewrite cast_nil, vlist_vrepeat; reflexivity.
+rewrite IHn. reflexivity. lia.
+Qed.
+
 End Casting.
 
 End Type_agnostic.
@@ -196,7 +227,7 @@ apply Vector.case0 with (v:=ts); easy.
 apply Vector.caseS' with (v:=ts); intros; simpl; rewrite IHhs; easy.
 Qed.
 
-Theorem transpose_transpose m n (mat : matrix m n) :
+Theorem transpose_transpose_id m n (mat : matrix m n) :
   transpose (transpose mat) = mat.
 Proof.
 revert mat; revert m; induction n; intros.
