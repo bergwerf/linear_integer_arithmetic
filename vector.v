@@ -105,6 +105,13 @@ induction v; simpl. easy.
 unfold vlist in *; rewrite IHv; easy.
 Qed.
 
+Theorem vmap_voflist l :
+  vlist (vmap f (voflist l)) = map f l.
+Proof.
+induction l; simpl. easy.
+rewrite <-IHl; reflexivity.
+Qed.
+
 End Mapping.
 
 Section Take.

@@ -47,22 +47,22 @@ Definition vctx {n} (w : list (vec n)) : list domain :=
 Definition Automatic φ := Σ n, Use Model φ n ×
   regular (λ w : list (vec n), Model |= (φ)[vctx w]).
 
-Section Lemmas.
+Section Preliminary_results.
 
-Lemma vctx_nil (w : list (vec 0)) :
+Theorem vctx_nil (w : list (vec 0)) :
   vctx w = [].
 Proof.
 unfold vctx; rewrite transpose_nil; easy.
 Qed.
 
-Lemma vctx_nth n (w : list (vec n)) i d :
+Theorem vctx_nth n (w : list (vec n)) i d :
   nth (findex i) (vctx w) d = decode (map (λ v, vnth v i) w).
 Proof.
 unfold vctx; rewrite <-vnth_nth_findex, ?vnth_vmap.
 rewrite vnth_transpose, <-map_vlist, vlist_voflist_id; reflexivity.
 Qed.
 
-Lemma vctx_map_take n k (Hk : k <= n) w :
+Theorem vctx_map_take n k (Hk : k <= n) w :
   vctx (map (vtake k Hk) w) = firstn k (vctx w).
 Proof.
 unfold vctx.
@@ -73,7 +73,16 @@ apply transpose_convert; rewrite vlist_voflist_id.
 rewrite <-map_vlist, vlist_voflist_id; reflexivity.
 Qed.
 
-Lemma Realizes_ctx_default φ Γ :
+Theorem vctx_surj Γ :
+  ∃w : list (vec (length Γ)), vctx w = Γ.
+Proof.
+pose(binary := vmap encode (voflist Γ)).
+pose(maxlen := lmax (map (@length _) (vlist binary))).
+pose(matrix := vmap (cast false maxlen) binary).
+exists (vlist (transpose matrix)).
+Admitted.
+
+Theorem Realizes_ctx_default φ Γ :
   Model |= (φ)[Γ] <-> Model |= (φ)[Γ ++ [default]].
 Proof.
 revert Γ; induction φ; simpl; intros.
@@ -90,46 +99,78 @@ induction n; simpl. now rewrite app_nil_r.
 rewrite repeat_cons, IHn, app_assoc. apply Realizes_ctx_default.
 Qed.
 
-End Lemmas.
+End Preliminary_results.
 
-Lemma regular_ex φ n :
+(* Existential quantification is the most involved construction. *)
+Section Regularity_of_existential_quantification.
+
+Lemma map_vhd_map2_cons {X n} hs (ts : list (Vector.t X n)) :
+  map vhd (map2 (λ h t, h ;; t) hs ts) = hs.
+Proof.
+Admitted.
+
+Lemma map_vtl_map2_cons {X n} hs (ts : list (Vector.t X n)) :
+  map vtl (map2 (λ h t, h ;; t) hs ts) = ts.
+Proof.
+Admitted.
+
+Theorem regular_ex φ n :
   regular (λ w : list (vec (S n)), Model |= (φ)[vctx w]) ->
   regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
 Proof.
-intros [A det size [Q [_ Q_spec]] dec spec].
+intros [A det size [Q [Q_len Q_spec]] dec spec].
+pose(zero := vrepeat false n);
 pose(pr (v : vec n) := [true ;; v; false ;; v]).
 eapply Regular.
-- apply Automata.pow_det.
+- apply Automata.pow_det
+  with (A:=Automata.sat _ (Automata.proj _ A _ pr) zero size).
 - apply Automata.pow_size.
 - simpl; apply Automata.pow_dec.
 - intros; simpl.
-  rewrite Automata.pow_spec, Automata.proj_spec with (pr:=pr).
-  2: apply Q_spec. split.
+  (* Transform into automaton specification. *)
+  rewrite Automata.pow_spec, Automata.sat_spec.
+  rewrite ex_iff. 2: intros; apply Automata.proj_spec. simpl.
+  (* Prove specification hypotheses. *)
+  4: apply Q_spec. 3: exists Q; easy. 2: apply dec.
+  (* Prove correctness. *)
+  split.
   + (* Given a word for φ, compute the witness. *)
-    intros [v [Himage Hv]]. apply spec in Hv.
+    intros [k [v [Himage Hv]]]. apply spec in Hv.
     exists (decode (map Vector.hd v)).
+    unfold Automata.Image in Himage.
     erewrite wd. apply Hv. clear Hv.
-    (* Reduce to: map vtl v = w. *)
+    (* Expose transposition and remove head. *)
     unfold vctx; rewrite transpose_cons; simpl.
     rewrite vlist_cons, <-map_vlist with (f:=vhd), vlist_voflist_id.
-    apply wd, wd, wd; apply transpose_convert.
-    rewrite <-map_vlist, ?vlist_voflist_id.
-    (* Prove using induction over Himage. *)
-    apply Forall2_map with (f:=pr) in Himage.
-    induction Himage; simpl. easy. rewrite <-IHHimage.
-    destruct H as [R|[R|]]; subst; easy.
+    apply wd, wd.
+    (* Replace (vmap vtl (voflist v)) with (voflist w ++ vrepeat zero k) *)
+    (* Show that decode erases all added zero vectors. *)
+    admit.
   + (* Given a witness, construct a word for φ. *)
     intros [x Hx].
     pose(xw  := encode x).
+    pose(k   := length xw - length w).
     pose(xw' := xw ++ repeat false (length w)).
-    pose(w'  := w ++ repeat (vrepeat false n) (length xw)).
-    exists (map2 (λ h t, h ;; t) xw' w').
-    (*
-    To extend the word with zeros (space that the witness might need to finish),
-    we have to close the accept states under final zero transitions. This is
-    possible with the saturation construction (Automata.sat).
-    *)
+    pose(w'  := w ++ repeat zero k).
+    exists k, (map2 (λ h t, h ;; t) xw' w'); split.
+    * (* Show that the word is in the image. *)
+      (* This goal should be a separate theorem. *)
+      admit.
+    * (* Show that the word is accepted. *)
+      apply spec; erewrite wd. apply Hx. clear Hx.
+      (* Expose transposition and reduce. *)
+      unfold vctx; rewrite transpose_cons; simpl.
+      rewrite vlist_cons, <-map_vlist with (f:=vhd), vlist_voflist_id.
+      rewrite map_vhd_map2_cons; unfold xw', xw at 1.
+      rewrite decode_padding, decode_encode_id; apply wd.
+      erewrite transpose_convert.
+      2: rewrite vmap_voflist, map_vtl_map2_cons.
+      2: rewrite vlist_voflist_id; reflexivity.
+      apply wd; unfold w'.
+      (* This goal is similar to an earlier one. *)
 Admitted.
+
+End Regularity_of_existential_quantification.
 
 Theorem automatic_structure φ :
   (∀a, Automatic (wff_atom a)) -> Automatic φ.
@@ -164,15 +205,6 @@ induction φ; simpl.
     apply Use_ex, use.
     apply regular_ex, reg.
 Qed.
-
-Theorem vctx_surj Γ :
-  ∃w : list (vec (length Γ)), vctx w = Γ.
-Proof.
-pose(binary := vmap encode (voflist Γ)).
-pose(maxlen := lmax (map (@length _) (vlist binary))).
-pose(matrix := vmap (cast false maxlen) binary).
-exists (vlist (transpose matrix)).
-Admitted.
 
 Theorem Automatic_Realizes_dec φ :
   Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬ Model |= (φ)[Γ]}.
