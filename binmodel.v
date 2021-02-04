@@ -1,7 +1,7 @@
 (* An automatic structure for rformula. *)
 
 Require Vector.
-Require Import Utf8 Bool Nat List Lia.
+Require Import Utf8 Bool List Lia.
 Require Import PeanoNat BinNat Nnat.
 From larith Require Import tactics notations utilities vector binary.
 From larith Require Import formulae automata regular automatic.
@@ -212,7 +212,7 @@ Lemma regular_rel_zero i :
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_zero); intros.
-  simpl; destruct c; simpl; lia.
+  simpl; destruct c; simpl; auto.
 - apply Automata.opt_size, finite_unit.
 - apply option_unit_dec.
 - apply Automata.opt_spec.
@@ -227,7 +227,7 @@ Lemma regular_rel_one i :
 Proof.
 eapply regular_ext. eapply regular_proj. eapply Regular.
 - apply Automata.opt_det with (A:=dfa_one); intros.
-  simpl; destruct c, s; simpl; lia.
+  simpl; destruct c, s; simpl; auto.
 - apply Automata.opt_size, finite_bool.
 - apply option_bool_dec.
 - apply Automata.opt_spec.
@@ -244,7 +244,7 @@ remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
 eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_eq); intros.
-  simpl; destruct c as [[] []], s; simpl; lia.
+  simpl; destruct c as [[] []], s; simpl; auto.
 - apply Automata.opt_size, finite_unit.
 - apply option_unit_dec.
 - apply Automata.opt_spec.
@@ -280,7 +280,7 @@ pose(f (c : vec (S n)) :=
   ((vnth c (fin n i), vnth c (fin n j)), vnth c (fin n k))).
 eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
 - apply Automata.opt_det with (A:=dfa_add); intros.
-  simpl; destruct c as [[[] []] []], s; simpl; lia.
+  simpl; destruct c as [[[] []] []], s; simpl; auto.
 - apply Automata.opt_size, finite_bool.
 - apply option_bool_dec.
 - apply Automata.opt_spec.
@@ -294,7 +294,7 @@ Lemma nth_firstn {X} i n l (d : X) :
   i < n -> nth i (firstn n l) d = nth i l d.
 Proof.
 revert i n; induction l; destruct n, i; simpl; try easy.
-intros H; apply IHl; lia.
+intros H; apply IHl, Lt.lt_S_n, H.
 Qed.
 
 Theorem Automatic_rel_atom (a : rel_atom) :

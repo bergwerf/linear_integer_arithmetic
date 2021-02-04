@@ -1,7 +1,7 @@
 (* Vector and matrix utilities. *)
 
 Require Vector.
-Require Import Utf8 PeanoNat List Lia.
+Require Import Utf8 PeanoNat List.
 From larith Require Import tactics notations.
 Import ListNotations.
 
@@ -100,7 +100,7 @@ Theorem fin_spec n i :
   i <= n -> findex (fin n i) = i.
 Proof.
 revert i; induction n, i; simpl; intros; try easy.
-rewrite IHn. easy. lia.
+rewrite IHn. easy. apply le_S_n, H.
 Qed.
 
 Theorem vnth_nth_findex n (v : vec n) (i : Fin.t n) d :
@@ -202,7 +202,7 @@ Proof.
 revert l; induction n; destruct l; simpl; try easy.
 all: intros; rewrite vlist_cons.
 rewrite cast_nil, vlist_vrepeat; reflexivity.
-rewrite IHn. reflexivity. lia.
+rewrite IHn. reflexivity. apply le_S_n, H.
 Qed.
 
 End Cast.

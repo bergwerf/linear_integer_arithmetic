@@ -1,6 +1,6 @@
 (* Basic theory of automata. *)
 
-Require Import Utf8 Bool PeanoNat List Lia Eqdep_dec.
+Require Import Utf8 Bool PeanoNat List Eqdep_dec.
 From larith Require Import tactics notations utilities path.
 Import ListNotations.
 
@@ -295,7 +295,8 @@ Theorem opt_det :
 Proof.
 intros H c [s|]; simpl. 2: easy.
 destruct (length (trans A c s) =? 0) eqn:E; simpl; b_Prop.
-easy. assert(Hcs := H c s). rewrite map_length; lia.
+easy. assert(Hcs := H c s). rewrite map_length.
+apply Nat.le_1_r in Hcs as []; easy.
 Qed.
 
 Theorem opt_size n :
@@ -441,7 +442,7 @@ Proof.
 revert n s; induction m; simpl; intros.
 easy. destruct n; simpl. easy. b_Prop. now left. right.
 apply existsb_exists in e as [t H]; apply existsb_exists; exists t.
-split. easy. apply IHm. easy. lia.
+split. easy. apply IHm. easy. apply le_S_n, H0.
 Qed.
 
 Theorem sat_accept_spec s :

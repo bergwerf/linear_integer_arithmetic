@@ -1,6 +1,6 @@
 (* Basic utilities for various purposes. *)
 
-Require Import Utf8 Nat PeanoNat List Lia.
+Require Import Utf8 PeanoNat List.
 From larith Require Import tactics notations.
 Import ListNotations.
 
@@ -82,8 +82,8 @@ Theorem lmax_in n l :
   In n l -> n <= lmax l.
 Proof.
 induction l; simpl. easy.
-intros [H|H]. subst. lia.
-apply IHl in H. lia.
+intros [H|H]; subst. apply Nat.le_max_l.
+apply Nat.max_le_iff; right; apply IHl, H.
 Qed.
 
 Section Forall2.
@@ -294,7 +294,8 @@ Theorem pfilter_length l :
   length (pfilter l) <= length l.
 Proof.
 induction l; simpl. easy.
-destruct (P_dec a); simpl; lia.
+destruct (P_dec a); simpl.
+apply le_n_S, IHl. apply le_S, IHl.
 Qed.
 
 End Filtering.
@@ -327,14 +328,16 @@ Proof.
 unfold subtract, intersect; induction l; simpl pfilter. easy.
 destruct (in_dec dec a l'), (not_dec _ _); try easy.
 simpl length; rewrite IHl0; clear IHl0. remember (pfilter _ _ l0) as l1.
-assert(length l1 <= length l0) by (subst; apply pfilter_length). lia.
+assert(length l1 <= length l0) by (subst; apply pfilter_length).
+rewrite <-Nat.sub_succ_l. reflexivity. easy.
 Qed.
 
 Corollary intersect_length :
   length intersect = length l - length subtract.
 Proof.
 rewrite subtract_length.
-assert(length intersect <= length l) by apply pfilter_length. lia.
+assert(length intersect <= length l) by apply pfilter_length.
+symmetry; apply Nat.add_sub_eq_l, Nat.sub_add, H.
 Qed.
 
 End Intersection_and_subtraction.

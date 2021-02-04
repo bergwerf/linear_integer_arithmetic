@@ -1,6 +1,6 @@
 (* Theorems about connections in finite graphs. *)
 
-Require Import Utf8 PeanoNat Wf_nat List Lia.
+Require Import Utf8 PeanoNat Wf_nat List.
 From larith Require Import tactics notations utilities.
 Import ListNotations.
 
@@ -69,15 +69,16 @@ destruct (Nat.eq_dec (length Gv) 0).
   apply length_zero_iff_nil in e; rewrite <-e.
   now apply intersect_spec.
 - (* Show that G is not empty. *)
-  assert(length G ≠ 0). {
-    intros H; apply n1. unfold Gv; rewrite intersect_length. lia. }
+  assert(length G ≠ 0).
+  intros H; apply n1; unfold Gv; rewrite intersect_length, H; reflexivity.
   (* Determine if a node in G ∩ adj v is connected through G \ adj v. *)
   pose(G' := subtract dec G (adj v)).
   destruct (Exists_dec (Connected G') Gv).
   + (* Decide using the induction hypothesis. *)
     intros; eapply IH. 2: reflexivity.
-    unfold G'; rewrite <-G_size, subtract_length.
-    fold Gv; lia.
+    unfold G'; rewrite <-G_size, subtract_length; fold Gv.
+    destruct (length G), (length Gv); simpl; try easy.
+    eapply Nat.le_lt_trans. apply Nat.le_sub_l. auto.
   + (* A path exists. *)
     left. apply Exists_exists in e as [w [H1w [p]]].
     apply intersect_spec in H1w.
@@ -113,13 +114,15 @@ Proof.
 remember (length G) as n; apply eq_sym in Heqn; revert Heqn p; revert G v.
 apply lt_wf_rect with (n:=n); clear n; intros n IH G v G_size p.
 destruct p.
-- exists (path_stop _ _ f); simpl; lia.
+- exists (path_stop _ _ f); simpl; apply le_0_n.
 - assert(length (remove dec w G) < n).
   rewrite <-G_size; apply remove_length_lt, i.
   eapply path_remove_start, IH in p as [p Hp]. 3: reflexivity. 2: easy.
   destruct path_subset with (p:=p)(H:=G) as [q q_len].
   intros; apply in_remove in H0; easy.
-  exists (path_step _ v w i i0 q). simpl; lia.
+  exists (path_step _ v w i i0 q); simpl.
+  rewrite q_len; apply Lt.lt_le_S.
+  eapply Nat.le_lt_trans; [apply Hp|apply H].
 Defined.
 
 End Connecting_paths.

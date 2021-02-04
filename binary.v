@@ -1,6 +1,6 @@
 (* LSB list bool encoding and decoding of binary numbers. *)
 
-Require Import Utf8 Bool List Lia.
+Require Import Utf8 Bool List.
 Require Import BinNat BinPos Nnat.
 From larith Require Import tactics notations utilities.
 Import ListNotations.
@@ -54,7 +54,8 @@ Qed.
 Corollary bnum_cons_eq_one xs :
   bnum (true :: xs) = 1 <-> bnum xs = 0.
 Proof.
-rewrite bnum_cons; simpl bnum. lia.
+rewrite bnum_cons; simpl bnum.
+destruct (bnum xs); easy.
 Qed.
 
 Theorem bnum_cons_compare x xs y ys :

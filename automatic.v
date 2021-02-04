@@ -4,7 +4,7 @@ Require Vector.
 Require Import Utf8 PeanoNat BinNat List Lia.
 From larith Require Import tactics notations utilities vector.
 From larith Require Import formulae automata regular.
-Import Nat ListNotations.
+Import ListNotations.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
 Section Decide_wff_using_automata.
@@ -102,14 +102,14 @@ Lemma map_vhd_glue {X n} hs (ts : list (Vector.t X n)) :
   length hs <= length ts -> map vhd (glue hs ts) = hs.
 Proof.
 revert ts; induction hs; destruct ts; simpl; intros; try easy.
-rewrite IHhs. easy. lia.
+rewrite IHhs. easy. apply le_S_n, H.
 Qed.
 
 Lemma map_vtl_glue {X n} hs (ts : list (Vector.t X n)) :
   length ts <= length hs -> map vtl (glue hs ts) = ts.
 Proof.
 revert ts; induction hs; destruct ts; simpl; intros; try easy.
-rewrite IHhs. easy. lia.
+rewrite IHhs. easy. apply le_S_n, H.
 Qed.
 
 Variable n : nat.
@@ -206,16 +206,16 @@ induction φ; simpl.
   destruct IHφ1 as [n1 [use1 reg1]], IHφ2 as [n2 [use2 reg2]].
   exists (max n1 n2); split; simpl.
   + apply Use_and; eapply Use_weaken.
-    apply use1. apply le_max_l. apply use2. apply le_max_r.
+    apply use1. apply Nat.le_max_l. apply use2. apply Nat.le_max_r.
   + apply regular_conjunction; eapply regular_proj;
     [apply reg1|intros|apply reg2|intros]; simpl.
     all: rewrite vctx_map_take; easy.
-    Unshelve. apply le_max_l. apply le_max_r.
+    Unshelve. apply Nat.le_max_l. apply Nat.le_max_r.
 - (* Quantification: tail projection. *)
   destruct IHφ as [n [use reg]]; destruct n.
   + (* Edge case: the quantified formula is realized by an empty context. *)
     exists 0; split.
-    eapply Use_ex, Use_weaken. apply use. lia.
+    eapply Use_ex, Use_weaken. apply use. auto.
     eapply regular_ext. apply reg.
     intros; simpl; rewrite vctx_nil; split.
     intros; exists default; apply Realizes_ctx_default in H; easy.

@@ -1,6 +1,6 @@
 (* Formulae and interpretations of Presburger arithmetic. *)
 
-Require Import Utf8 Nat List.
+Require Import Utf8 List.
 From larith Require Import tactics notations utilities.
 Import ListNotations.
 
