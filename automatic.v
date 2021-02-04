@@ -227,7 +227,7 @@ induction φ; simpl.
 Defined.
 
 Theorem Automatic_Realizes_dec φ :
-  Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬Model |= (φ)[Γ]}.
+  Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, Model |= (¬`φ)[Γ]}.
 Proof.
 intros [n [use reg]].
 apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
@@ -248,7 +248,7 @@ Defined.
 
 Corollary automatic_structure_dec φ :
   (∀a, Automatic (wff_atom a)) ->
-  {∃Γ, Model |= (φ)[Γ]} + {∀Γ, ¬Model |= (φ)[Γ]}.
+  {∃Γ, Model |= (φ)[Γ]} + {∀Γ, Model |= (¬`φ)[Γ]}.
 Proof.
 intros H; apply Automatic_Realizes_dec, automatic_structure, H.
 Defined.

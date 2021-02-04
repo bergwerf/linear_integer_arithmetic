@@ -320,7 +320,7 @@ Defined.
 End Regularity_of_BinR.
 
 Theorem BinR_dec φ :
-  {∃Γ, BinR |= (φ)[Γ]} + {∀Γ, ¬BinR |= (φ)[Γ]}.
+  {∃Γ, BinR |= (φ)[Γ]} + {∀Γ, BinR |= (¬`φ)[Γ]}.
 Proof.
 apply automatic_structure_dec with (default:=0%N)(decode:=bnum)(encode:=bits).
 apply BinR_default.
@@ -331,15 +331,15 @@ Defined.
 
 (* The Grande Final Theorem! *)
 Theorem Nat_dec φ :
-  {∃Γ, Nat |= (φ)[Γ]} + {∀Γ, ¬Nat |= (φ)[Γ]}.
+  {∃Γ, Nat |= (φ)[Γ]} + {∀Γ, Nat |= (¬`φ)[Γ]}.
 Proof.
 destruct convert_formula_to_rformula with (φ:=φ) as [ϕ ϕ_spec].
 destruct BinR_dec with (φ:=ϕ).
-- left; destruct e as [Γ HΓ]; exists (map N.to_nat Γ).
-  apply ϕ_spec, NatR_BinR_isomorphism. erewrite map_map, map_ext.
-  rewrite map_id; apply HΓ. apply N2Nat.id.
-- right; intros Γ HΓ; apply n with (Γ:=map N.of_nat Γ).
-  apply NatR_BinR_isomorphism, ϕ_spec, HΓ.
+- left; destruct e as [Γ HΓ].
+  exists (map N.to_nat Γ). apply ϕ_spec, NatR_BinR_isomorphism.
+  erewrite map_map, map_ext. rewrite map_id; apply HΓ. apply N2Nat.id.
+- right; intros Γ HΓ.
+  apply ϕ_spec, NatR_BinR_isomorphism, r in HΓ; easy.
 Defined.
 
 Check Nat_dec.
