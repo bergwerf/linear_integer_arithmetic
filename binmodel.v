@@ -32,10 +32,10 @@ destruct a; simpl;
 rewrite ?nth_app_default; easy.
 Qed.
 
-Theorem NatR_iff_BinR φ Γ :
+Theorem NatR_BinR_isomorphism φ Γ :
   NatR |= (φ)[Γ] <-> BinR |= (φ)[map N.of_nat Γ].
 Proof.
-apply similar_models; clear Γ.
+apply isomorphic_model; clear Γ.
 - intros y; exists (N.to_nat y). apply N2Nat.id.
 - intros; destruct a; simpl.
   all: replace (0%N) with (N.of_nat 0) by easy.
@@ -336,10 +336,10 @@ Proof.
 destruct convert_formula_to_rformula with (φ:=φ) as [ϕ ϕ_spec].
 destruct BinR_dec with (φ:=ϕ).
 - left; destruct e as [Γ HΓ]; exists (map N.to_nat Γ).
-  apply ϕ_spec, NatR_iff_BinR. erewrite map_map, map_ext.
+  apply ϕ_spec, NatR_BinR_isomorphism. erewrite map_map, map_ext.
   rewrite map_id; apply HΓ. apply N2Nat.id.
 - right; intros Γ HΓ; apply n with (Γ:=map N.of_nat Γ).
-  apply NatR_iff_BinR, ϕ_spec, HΓ.
+  apply NatR_BinR_isomorphism, ϕ_spec, HΓ.
 Defined.
 
 Check Nat_dec.

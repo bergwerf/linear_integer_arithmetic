@@ -82,9 +82,9 @@ Notation "∃[ φ ]" := (wff_ex φ) (format "∃[ φ ]").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A φ Γ)
   (at level 20, format "A  |=  ( φ )[ Γ ]").
 
-Section Facts_about_realization.
+Section Results_about_realization.
 
-Section Same_domain.
+Section Reductions.
 
 Variable dom atomA atomB : Type.
 Variable A : model atomA dom.
@@ -107,9 +107,9 @@ intros eqv1 eqv2; simpl; split; intros H.
 all: split; [apply eqv1|apply eqv2]; apply H.
 Qed.
 
-End Same_domain.
+End Reductions.
 
-Section Same_atoms.
+Section Isomorphism.
 
 Variable domA domB atom : Type.
 Variable A : model atom domA.
@@ -117,7 +117,7 @@ Variable B : model atom domB.
 Variable f : domA -> domB.
 Hypothesis f_surj : ∀y, ∃x, f x = y.
 
-Theorem similar_models :
+Theorem isomorphic_model :
   (∀a Γ, A a Γ <-> B a (map f Γ)) ->
   ∀φ Γ, A |= (φ)[Γ] <-> B |= (φ)[map f Γ].
 Proof.
@@ -133,9 +133,9 @@ intros eqv; induction φ; simpl; intros.
     exists x; apply IHφ, Hy.
 Qed.
 
-End Same_atoms.
+End Isomorphism.
 
-End Facts_about_realization.
+End Results_about_realization.
 
 (* Atomic formulae for languages that we will be using. *)
 Section Atomic_formulae_for_linear_arithmetic.
