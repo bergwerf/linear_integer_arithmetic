@@ -209,6 +209,26 @@ End Cast.
 
 End Type_agnostic.
 
+Section Enumerate_boolean_vectors.
+
+Fixpoint enumerate_vectors n : list (vec n) :=
+  match n with
+  | 0 => [⟨⟩]
+  | S m =>
+    let vs := enumerate_vectors m in
+    map (Vector.cons _ false m) vs ++
+    map (Vector.cons _ true m) vs
+  end.
+
+Theorem enumerate_vectors_spec n (v : vec n) :
+  In v (enumerate_vectors n).
+Proof.
+induction v; simpl. now left.
+apply in_app_iff; destruct h; [right|left]; apply in_map, IHv.
+Qed.
+
+End Enumerate_boolean_vectors.
+
 Section Matrix_transposition.
 
 Variable X : Type.

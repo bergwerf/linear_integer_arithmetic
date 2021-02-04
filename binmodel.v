@@ -342,6 +342,9 @@ destruct BinR_dec with (φ:=ϕ).
   apply NatR_iff_BinR, ϕ_spec, HΓ.
 Defined.
 
+Check Nat_dec.
+Print Assumptions Nat_dec.
+
 Section Evaluation.
 
 Notation "φ ∨` ϕ" := (¬`(¬`φ ∧` ¬`ϕ)) (at level 35).

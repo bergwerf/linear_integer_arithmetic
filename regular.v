@@ -51,7 +51,7 @@ apply det. apply fin. apply dec.
 intros; rewrite <-H; apply spec.
 Defined.
 
-(* Change the domain alphabet. *)
+(* Change the alphabet. *)
 Theorem regular_proj {letter letter' : Set} P Q (pr : letter' -> letter) :
   regular P -> (∀w, P (map pr w) <-> Q w) -> regular Q.
 Proof.

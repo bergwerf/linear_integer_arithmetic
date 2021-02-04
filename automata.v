@@ -27,13 +27,13 @@ Fixpoint Accepts (word : list letter) (s : list (state A)) :=
   | c :: w => Accepts w (flat_map (trans A c) s)
   end.
 
-(* The language of an automaton contains all accepted words. *)
+(* A word is in the language if it is accepted from the start state. *)
 Definition Language word := Accepts word [start A].
 
-(* An automaton is deterministic if every transition goes to 1 state. *)
+(* An automaton is deterministic if every transition has 1 target state. *)
 Definition Deterministic := ∀c s, length (trans A c s) = 1.
 
-(* A finite state space can be given as a list. *)
+(* There are finitely many states if they all fit on a list. *)
 Definition Finite n := Σ Q, length Q = n /\ ∀s : state A, In s Q.
 
 Theorem not_Accepts_nil w :
