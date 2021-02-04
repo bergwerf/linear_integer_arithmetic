@@ -7,7 +7,7 @@ From larith Require Import tactics notations utilities vector binary.
 From larith Require Import formulae automata regular automatic.
 Import ListNotations.
 
-(* A binary model for the relational language of linear integer arithmetic. *)
+(* A model for the relational language on a domain of binary strings. *)
 Definition BinR (a : rel_atom) (Γ : list N) :=
   (let f := λ i, nth i Γ 0 in
   match a with
