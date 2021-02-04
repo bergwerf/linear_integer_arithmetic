@@ -45,7 +45,7 @@ Theorem not_dec :
   {¬P} + {¬¬P}.
 Proof.
 destruct P_dec; auto.
-Qed.
+Defined.
 
 End Propositions.
 

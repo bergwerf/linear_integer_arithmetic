@@ -342,9 +342,6 @@ destruct BinR_dec with (φ:=ϕ).
   apply ϕ_spec, NatR_BinR_isomorphism, r in HΓ; easy.
 Defined.
 
-Check Nat_dec.
-Print Assumptions Nat_dec.
-
 Section Evaluation.
 
 Notation "φ ∨` ϕ" := (¬`(¬`φ ∧` ¬`ϕ)) (at level 35).
@@ -352,6 +349,8 @@ Notation "φ ⟹ ϕ" := (¬`(φ ∧` ¬`ϕ)) (at level 40).
 Notation "∀[ φ ]" := (¬`∃[¬`φ]) (format "∀[ φ ]").
 Notation "i =` j" := (wff_atom (rel_eq i j)) (at level 25).
 Notation "i ≤` j" := (wff_atom (rel_le i j)) (at level 25).
+Notation "i ≠` j" := (¬`(i =` j)) (at level 25).
+Notation "i <` j" := (i ≤` j ∧` i ≠` j) (at level 25).
 Notation Zero i   := (wff_atom (rel_zero i)).
 Notation One i    := (wff_atom (rel_one i)).
 Notation decide φ := (if BinR_dec φ then true else false).
@@ -363,28 +362,44 @@ It is possible to evaluate the decision procedure, but it is extremely slow! The
 decision itself takes place in Set and can be evaluated, but I do not know how
 to retrieve the actual witness in Prop.
 
-Here are two examples of very trivial valid formulae in the relational language
-that can be decided within a few seconds.
+Here are some examples of trivial valid formulae in the relational language that
+can be decided within a few seconds.
 ```
 Compute decide ∃[One 0].
 Compute decide ∀[0 ≤` 0].
+Compute decide ∃[0 ≠` 0].
+Compute decide ∀[Zero 0].
+Compute decide (0 <` 1).
+Compute decide (0 <` 1 ∧` 1 <` 0).
+Compute decide (0 ≤` 1 ∧` 1 ≤` 0 ∧` 0 ≠` 1).
 ```
 
-But even slightly non-trivial examples become unfeasible. I did not have the
-patience to let the following ones finish.
+Slightly non-trivial examples (in particular quantifiers over more complex
+formulas) become unfeasible. I did not have the patience to let the following
+examples finish.
 ```
-Compute decide ∃[Zero 0 ∧` One 0].
-Compute decide ∃[Zero 0 ∧` ∃[0 ≤` 1]].
+Compute decide ∀[0 <` 1 ∨` 1 <` 0].
 Compute decide ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ⟹ 0 =` 1]].
 ```
 
 The terrible performance is of course entirely to blame on this implementation.
 There exist efficient implementations of this decision procedure which could
 easily evaluate the above examples.
+
+There are some opportunities to improve the performance without altering the
+construction in a fundamental way:
++ The automaton construction could be separated from the specification.
++ The path search could use a search depth and visited nodes list.
+
+It would also be interesting to (effectively) produce witnesses in Set. Note
+that the path search could directly use the automaton accept function, and that
+it could just use lists to represent paths (all properties can be deferred to
+its specification). Introducing binary trees probably doesn't make sense,
+because at that point there are other much more limiting factors.
 *)
 
 Example decide_a_formula_by_computation :
-  decide ∀[0 ≤` 0] = true.
+  decide ∃[0 ≠` 0] = false.
 Proof.
 vm_compute; reflexivity.
 Qed.

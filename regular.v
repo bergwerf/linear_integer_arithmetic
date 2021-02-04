@@ -91,7 +91,7 @@ Theorem regular_negation :
 Proof.
 intros [A det size fin dec spec].
 eapply Regular with (r_dfa:=Automata.compl _ A).
-- apply Automata.compl_det, det.
+- apply det.
 - apply fin.
 - apply dec.
 - intros. rewrite Automata.compl_spec.

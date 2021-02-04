@@ -332,12 +332,6 @@ Proof.
 intros; apply compl_Accepts.
 Qed.
 
-Theorem compl_det :
-  Deterministic compl.
-Proof.
-easy.
-Qed.
-
 End Complementation.
 
 (* Change the alphabet using a projection function. *)
