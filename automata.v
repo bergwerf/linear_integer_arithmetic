@@ -437,7 +437,7 @@ Qed.
 Theorem sat_accept_complete s (path : suffix_path s) :
   sat_accept (1 + path_length path) s = true.
 Proof.
-induction path; simpl. now rewrite e.
+induction path; simpl. now rewrite f.
 b_Prop; right. apply existsb_exists; exists w; easy.
 Qed.
 
@@ -518,7 +518,7 @@ Theorem Acceptable_Accepts s :
   Acceptable s -> ∃w, Accepts A w [s].
 Proof.
 intros [p]; induction p.
-- exists nil; simpl; now rewrite e.
+- exists nil; simpl; now rewrite f.
 - apply in_flat_map in i0 as [c [_ Hc]].
   destruct IHp as [w' Hw]; exists (c :: w'); simpl.
   rewrite app_nil_r; apply Accepts_determine; exists w; easy.

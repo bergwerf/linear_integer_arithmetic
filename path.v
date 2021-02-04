@@ -8,14 +8,14 @@ Section Connecting_paths.
 
 Variable node : Type.
 Variable adj : node -> list node.
-Variable End : node -> Prop.
+Variable Final : node -> Prop.
 
 Hypothesis dec : ∀v w : node, {v = w} + {v ≠ w}.
-Hypothesis End_dec : ∀v, {End v} + {¬End v}.
+Hypothesis Final_dec : ∀v, {Final v} + {¬Final v}.
 
-(* A path to an end node in graph g. *)
+(* A path to a final node in graph g. *)
 Inductive path G : node -> Type :=
-  | path_stop v : End v -> path G v
+  | path_stop v : Final v -> path G v
   | path_step v w : In w G -> In w (adj v) -> path G w -> path G v.
 
 Inductive Connected G v : Prop :=
@@ -32,7 +32,7 @@ Theorem path_subset G H v (p : path G v) :
   (∀x, In x G -> In x H) -> Σ q : path H v, path_length q = path_length p.
 Proof.
 intros subset; induction p.
-- exists (path_stop _ v e); easy.
+- exists (path_stop _ v f); easy.
 - destruct IHp as [q IH].
   exists (path_step _ v w (subset w i) i0 q).
   simpl; rewrite IH; reflexivity.
@@ -44,7 +44,7 @@ Theorem path_split G Ga Gb v :
   path Ga v + Σ w, In w Gb × path Ga w.
 Proof.
 intros p g_spec; induction p.
-- left; apply path_stop, e.
+- left; apply path_stop, f.
 - destruct IHp.
   apply g_spec in i as [H1|H2].
   + left; now apply path_step with (w:=w).
@@ -52,15 +52,15 @@ intros p g_spec; induction p.
   + right; easy.
 Qed.
 
-(* We can effectively determine if v is connected to an end node. *)
+(* We can effectively determine if v is connected to a final node. *)
 Theorem Connected_dec G v :
   {Connected G v} + {¬Connected G v}.
 Proof.
 remember (length G) as n; apply eq_sym in Heqn; revert Heqn; revert G v.
 apply lt_wf_rect with (n:=n); clear n; intros n IH G v G_size.
 (* Check if v is a target state. *)
-destruct (End_dec v).
-left; apply conn, path_stop, e.
+destruct (Final_dec v).
+left; apply conn, path_stop, f.
 (* Determine if there is an intersection between G and adj v. *)
 pose(Gv := intersect dec G (adj v)).
 destruct (Nat.eq_dec (length Gv) 0).
@@ -113,7 +113,7 @@ Proof.
 remember (length G) as n; apply eq_sym in Heqn; revert Heqn p; revert G v.
 apply lt_wf_rect with (n:=n); clear n; intros n IH G v G_size p.
 destruct p.
-- exists (path_stop _ _ e); simpl; lia.
+- exists (path_stop _ _ f); simpl; lia.
 - assert(length (remove dec w G) < n).
   rewrite <-G_size; apply remove_length_lt, i.
   eapply path_remove_start, IH in p as [p Hp]. 3: reflexivity. 2: easy.
