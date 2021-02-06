@@ -76,6 +76,13 @@ intros. destruct l. easy. destruct l.
 now exists x. easy.
 Qed.
 
+Theorem last_cons {X} l (x d : X) :
+  last (x :: l) d = last l x.
+Proof.
+revert x d; induction l; simpl; intros.
+easy. destruct l. easy. apply IHl.
+Qed.
+
 Notation lmax l := (fold_right max 0 l).
 
 Theorem lmax_in n l :
