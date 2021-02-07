@@ -42,7 +42,7 @@ Proof.
 now induction w.
 Qed.
 
-Theorem Accepts_subset w s1 s2 :
+Theorem Accepts_incl w s1 s2 :
   (∀s, In s s1 -> In s s2) -> Accepts w s1 -> Accepts w s2.
 Proof.
 revert s1 s2; induction w; simpl; intros s1 s2 H.
@@ -55,7 +55,7 @@ Qed.
 Corollary Accepts_eqv w s1 s2 :
   (∀s, In s s1 <-> In s s2) -> Accepts w s1 <-> Accepts w s2.
 Proof.
-intros; split; apply Accepts_subset, H.
+intros; split; apply Accepts_incl, H.
 Qed. 
 
 Theorem Accepts_app w s t :
@@ -193,11 +193,11 @@ revert ss; induction word as [|c w]; simpl; intros.
   rewrite flat_map_singleton, map_map, <-map_map.
   rewrite IHw, ?Exists_exists; split; intros [s []].
   + apply in_map_iff in H as [s' []]; subst.
-    exists s'; split. easy. eapply Accepts_subset. 2: apply H0.
+    exists s'; split. easy. eapply Accepts_incl. 2: apply H0.
     intros s; rewrite ?in_flat_map; intros [s'' []].
     exists s''; split. eapply normalize_sound, H. easy.
   + eexists; split. apply in_map_iff; eexists; split.
-    reflexivity. apply H. eapply Accepts_subset. 2: apply H0.
+    reflexivity. apply H. eapply Accepts_incl. 2: apply H0.
     intros s'; rewrite ?in_flat_map; intros [s'' []].
     exists s''; split. apply normalize_complete. all: easy.
 Qed.
@@ -361,12 +361,12 @@ revert s; induction word as [|c w]; simpl; intros.
     apply in_flat_map in H as [c' Hc'].
     exists (c' :: v); simpl; split.
     * now apply Forall2_cons.
-    * eapply Accepts_subset. 2: apply Ht.
+    * eapply Accepts_incl. 2: apply Ht.
       intros t'' Ht''; inv Ht''.
       apply in_flat_map; exists t'; easy.
   + destruct v; simpl in *. easy. inv H1.
     exists v; repeat split. easy.
-    eapply Accepts_subset. 2: apply H2.
+    eapply Accepts_incl. 2: apply H2.
     intros t; rewrite ?in_flat_map.
     intros [t' Ht]; exists t'; split.
     easy. apply in_flat_map; exists l; easy.

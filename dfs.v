@@ -22,9 +22,6 @@ Section Stateful_search.
 
 Variable X state solution : Type.
 Variable check : state -> X -> state + solution.
-Variable Solution : X -> solution -> Prop.
-
-Hypothesis check_sound : ∀s x sol, check s x = inr sol -> Solution x sol.
 
 Fixpoint search s l : state + (X × solution) :=
   match l with
@@ -36,14 +33,21 @@ Fixpoint search s l : state + (X × solution) :=
     end
   end.
 
+Section Soundness.
+
+Variable P : X -> solution -> Prop.
+Hypothesis check_sound : ∀s x sol, check s x = inr sol -> P x sol.
+
 Theorem search_sound s l x sol :
-  search s l = inr (x, sol) -> In x l /\ Solution x sol.
+  search s l = inr (x, sol) -> In x l /\ P x sol.
 Proof.
 revert s; induction l; simpl; intros. easy.
 destruct (check s a) eqn:Ha.
 apply IHl in H; split; [now right|apply H].
 inv H; split; [now left|eapply check_sound, Ha].
 Qed.
+
+End Soundness.
 
 End Stateful_search.
 
@@ -64,29 +68,41 @@ Fixpoint dfs depth visited v : list node + list node :=
     else if accept v then inr []
     else match search (dfs n) (v :: visited) (adj v)
     with
-    | inl vis      => inl vis
+    | inl vis     => inl vis
     | inr (w, tr) => inr (w :: tr)
     end
   end.
 
-Definition Trace := Related (λ v w, In w (adj v)).
-Definition Blind vis v := ∀tr, Trace (v :: tr) -> ∃w, In w tr /\ In w vis.
+Definition Path := Related (λ v w, In w (adj v)).
+Notation diff x y := (subtract dec x y).
+Notation Inl x := (∃l, x = inl l).
 
-Theorem dfs_inr depth visited v tr :
-  dfs depth visited v = inr tr -> Trace (v :: tr) /\ accept (last tr v) = true.
+Definition DFS_path visited tr :=
+  Path tr /\ NoDup tr /\ Forall (λ v, ¬In v visited) tr.
+Definition DFS_solution visited v tr :=
+  DFS_path visited (v :: tr) /\ accept (last tr v) = true.
+
+Theorem dfs_sound depth visited v tr :
+  dfs depth visited v = inr tr ->
+  DFS_solution visited v tr.
 Proof.
 revert visited v tr; induction depth; simpl; intros. easy.
 destruct (in_dec dec v visited). easy.
-destruct (accept v) eqn:C. inv H; split; [apply related_one|apply C].
-destruct (search _) eqn:Hs. easy. destruct p as [v' tr']; inv H.
-eapply search_sound in Hs. 2: intros; eapply IHdepth, H.
-simpl in Hs; split. apply related_cons; easy.
-rewrite last_cons; apply Hs.
-Qed.
+destruct (accept v) eqn:C.
+- inv H; repeat split. apply related_one.
+  apply NoDup_cons; [easy|apply NoDup_nil].
+  apply Forall_cons; easy. apply C.
+- destruct (search _) eqn:Hs. easy. destruct p as [v' tr']; inv H.
+  apply search_sound with (P:=DFS_solution (v :: visited)) in Hs.
+  (* search_sound is not strong enough to handle cascading states. *)
+Admitted.
 
-Theorem dfs_inl depth visited v vis :
-  dfs depth visited v = inl vis ->
-  Forall (Blind visited) (subtract dec vis visited).
+Variable graph : list node.
+Hypothesis graph_spec : ∀v, In v graph.
+
+Theorem dfs_complete visited v :
+  Inl (dfs (length (diff graph visited)) visited v) ->
+  ¬∃tr, DFS_solution visited v tr.
 Proof.
 Admitted.
 

@@ -28,13 +28,13 @@ Fixpoint path_length {G n} (p : path G n) : nat :=
   end.
 
 (* If G ⊆ H, then a path through G is a path through H. *)
-Theorem path_subset G H v (p : path G v) :
+Theorem path_incl G H v (p : path G v) :
   (∀x, In x G -> In x H) -> Σ q : path H v, path_length q = path_length p.
 Proof.
-intros subset; induction p.
+intros incl; induction p.
 - exists (path_stop _ v f); easy.
 - destruct IHp as [q IH].
-  exists (path_step _ v w (subset w i) i0 q).
+  exists (path_step _ v w (incl w i) i0 q).
   simpl; rewrite IH; reflexivity.
 Qed.
 
@@ -83,7 +83,7 @@ destruct (Nat.eq_dec (length Gv) 0).
     left. apply Exists_exists in e as [w [H1w [p]]].
     apply intersect_spec in H1w.
     apply conn, path_step with (w:=w); try easy.
-    eapply path_subset. apply p.
+    eapply path_incl. apply p.
     intros; eapply subtract_spec, H0.
   + (* Any path would yield a contradiction. *)
     right. intros [p]; apply n2.
@@ -118,7 +118,7 @@ destruct p.
 - assert(length (remove dec w G) < n).
   rewrite <-G_size; apply remove_length_lt, i.
   eapply path_remove_start, IH in p as [p Hp]. 3: reflexivity. 2: easy.
-  destruct path_subset with (p:=p)(H:=G) as [q q_len].
+  destruct path_incl with (p:=p)(H:=G) as [q q_len].
   intros; apply in_remove in H0; easy.
   exists (path_step _ v w i i0 q); simpl.
   rewrite q_len; apply Lt.lt_le_S.
