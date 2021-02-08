@@ -76,11 +76,19 @@ intros. destruct l. easy. destruct l.
 now exists x. easy.
 Qed.
 
-Theorem last_cons {X} l (x d : X) :
+Theorem last_cons {X} (x d : X) l :
   last (x :: l) d = last l x.
 Proof.
 revert x d; induction l; simpl; intros.
 easy. destruct l. easy. apply IHl.
+Qed.
+
+Theorem last_app {X} (x d : X) l1 l2 :
+  last (l1 ++ x :: l2) d = last l2 x.
+Proof.
+revert d; induction l1; intros.
+rewrite app_nil_l; apply last_cons.
+rewrite <-app_comm_cons, last_cons; apply IHl1.
 Qed.
 
 Notation lmax l := (fold_right max 0 l).
@@ -214,6 +222,17 @@ Section List_constructions_using_decidability.
 
 Variable X : Type.
 Hypothesis dec : ∀x y : X, {x = y} + {x ≠ y}.
+
+Theorem split_list (x : X) l :
+  Σ l1 l2, x :: l = l1 ++ x :: l2 /\ ¬In x l2.
+Proof.
+induction l. exists [], []; easy.
+destruct IHl as [l1 [l2 [H1 H2]]], (dec a x); subst.
+- rewrite H1. exists (x :: l1), l2; easy.
+- destruct l1; simpl in H1; inv H1.
+  exists [], (a :: l2); simpl; split; [easy|intros []; easy].
+  exists (x0 :: a :: l1), l2; easy.
+Qed.
 
 Section Powerset.
 
