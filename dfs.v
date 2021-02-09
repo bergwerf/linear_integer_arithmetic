@@ -123,23 +123,7 @@ Definition DFS_path visited path :=
 Definition DFS_solution visited v path :=
   DFS_path visited (v :: path) /\ accept (last path v) = true.
 
-Lemma Forall_Notin_nil {X} (l : list X) :
-  Forall (Notin []) l.
-Proof.
-apply Forall_forall; easy.
-Qed.
-
-(* Solutions given by dfs are correct. *)
-Theorem dfs_sound_weak n visited v path :
-  dfs n visited v = inr path -> DFS_solution [] v path.
-Proof.
-revert visited v path; induction n; simpl; intros. easy.
-destruct (in_dec dec v visited). easy. destruct (accept v) eqn:C.
-inv H; repeat split; [apply RTC_refl|apply Forall_Notin_nil|apply C].
-destruct (search _) as [|[w path']] eqn:Hs; [easy|inv H].
-apply search_inr_inv in Hs as [Hw [t Ht]]; apply IHn in Ht as [[]].
-repeat split. now apply RTC_cons. apply Forall_Notin_nil. now rewrite last_cons.
-Qed.
+Section Soundness.
 
 (* Visited nodes are remembered. *)
 Lemma dfs_inl_incl n vis_a v vis_z z :
@@ -160,6 +144,51 @@ apply IHws with (vis_b:=vis_c); easy.
 apply IHn in Hw; easy.
 Qed.
 
+(* Solutions given by dfs are correct. *)
+Theorem dfs_sound n vis_a v path :
+  dfs n vis_a v = inr path -> DFS_solution vis_a v path.
+Proof.
+revert vis_a v path; induction n; simpl; intros. easy.
+destruct (in_dec _); [easy|].
+destruct (accept v) eqn:Hv. inv H.
+repeat split; [apply RTC_refl|apply Forall_cons; easy|apply Hv].
+destruct (search _) as [|[z from_z]] eqn:Hs; [easy|inv H].
+(* Abstract over (v :: vis_a) and (next v). *)
+remember (v :: vis_a) as vis_b; remember (next v) as nextv.
+assert(∀x, In x vis_a -> In x vis_b) by (intros; subst; apply in_cons, H).
+assert(∀x, In x nextv -> In x (next v)) by (subst; easy).
+clear Hv Heqvis_b Heqnextv; revert Hs H H0; revert vis_b.
+(* Do induction over nextv. *)
+induction nextv as [|w ws]; simpl; intros.
+easy. destruct (dfs _) as [vis_c|] eqn:Hw.
+- apply IHws in Hs. apply Hs.
+  intros; eapply dfs_inl_incl. apply Hw. apply H, H1.
+  intros; apply H0; right; apply H1.
+- inv Hs; apply IHn in Hw as [[]]; repeat split.
+  apply RTC_cons; [apply H1|apply H0; now left].
+  apply Forall_cons. apply n0. eapply Forall_impl. 2: apply H2.
+  intros u; apply contra, H. rewrite last_cons; apply H3.
+Qed.
+
+End Soundness.
+
+Section Completeness.
+
+Variable graph : list node.
+Hypothesis graph_spec : ∀v, In v graph.
+
+(* Two DFS paths can be appended. *)
+Lemma DFS_path_trans visited v path1 path2 :
+  DFS_path visited (v :: path1) ->
+  DFS_path visited (last path1 v :: path2) ->
+  DFS_path visited (v :: path1 ++ path2).
+Proof.
+intros [H1a H1b] [H2a H2b].
+rewrite app_comm_cons; split. eapply RTC_trans with (d:=v).
+apply H1a. rewrite last_cons; apply H2a.
+apply Forall_app; split; [apply H1b|inv H2b].
+Qed.
+
 (* Each new visited node can be reached by a path. *)
 Lemma path_to_visited n vis_a v vis_z z :
   dfs n vis_a v = inl vis_z -> ¬In z vis_a -> In z vis_z ->
@@ -178,7 +207,7 @@ assert(¬In z vis_b) by (subst; apply not_in_cons; easy).
 assert(∀x, In x vis_a -> In x vis_b) by (intros; subst; apply in_cons, H2).
 assert(∀x, In x nextv -> In x (next v)) by (subst; easy).
 clear H0 n1 Heqvis_b Heqnextv; revert Hs H H2; revert vis_b.
-induction nextv as [|w ws]; simpl; intros. inv Hs.
+induction nextv as [|w ws]; simpl; intros. inv Hs. 
 (* Destruct the recursive call, and check if it visits z. *)
 destruct (dfs _) as [vis_c|] eqn:Hw; [|easy].
 destruct (in_dec dec z vis_c).
@@ -194,34 +223,19 @@ destruct (in_dec dec z vis_c).
   intros; eapply dfs_inl_incl. apply Hw. apply H2, H0.
 Qed.
 
-(* Two DFS paths can be appended. *)
-Lemma DFS_path_trans visited v path1 path2 :
-  DFS_path visited (v :: path1) ->
-  DFS_path visited (last path1 v :: path2) ->
-  DFS_path visited (v :: path1 ++ path2).
-Proof.
-intros [H1a H1b] [H2a H2b].
-rewrite app_comm_cons; split. eapply RTC_trans with (d:=v).
-apply H1a. rewrite last_cons; apply H2a.
-apply Forall_app; split; [apply H1b|inv H2b].
-Qed.
-
-Variable graph : list node.
-Hypothesis graph_spec : ∀v, In v graph.
-
 Theorem dfs_complete vis_a n :
   length (diff graph vis_a) <= n ->
   ∀v path, DFS_solution vis_a v path -> Inr (dfs n vis_a v).
 Proof.
 revert vis_a; induction n; intros vis_a Hn; intros.
-(* I. Zero case. Contradition since v ∈ graph \ visited. *)
+(* Zero case. Contradition since v ∈ graph \ visited. *)
 destruct H as [[_ H]]; inv H.
 exfalso; apply in_nil with (a:=v).
 apply Le.le_n_0_eq, eq_sym, length_zero_iff_nil in Hn.
 rewrite <-Hn; apply subtract_spec; easy.
-(* II. Successor case. *)
+(* Successor case. *)
 destruct H as [[]]; inv H0; simpl.
-destruct (in_dec _) as [F|_]; [easy|].
+destruct (in_dec _); [easy|]; clear n0.
 destruct (accept v) eqn:Hv; [apply Inr_inr|].
 (* Get a sub-path without v. *)
 destruct split_at_last_instance with (x:=v)(l:=v::path)
@@ -281,6 +295,25 @@ induction next1 as [|u]; simpl; intros.
     apply length_subtract_le_incl_r.
     intros; eapply dfs_inl_incl; [apply Hu|apply H].
 Qed.
+
+End Completeness.
+
+Variable graph_size : nat.
+Hypothesis finite_graph : ∃l, length l = graph_size /\ ∀v : node, In v l.
+
+Theorem depth_first_search visited v :
+  (Σ path, DFS_solution visited v path) +
+  {∀path, ¬DFS_solution visited v path}.
+Proof.
+destruct (dfs graph_size visited v) as [visited'|path] eqn:H.
+- right; intros path Hpath.
+  destruct finite_graph as [graph [graph_len graph_spec]].
+  assert(Hlen : length (diff graph visited) <= graph_size).
+  rewrite subtract_length, graph_len; apply Nat.le_sub_l.
+  eapply dfs_complete with (v:=v) in Hlen as [path' H'].
+  congruence. apply graph_spec. apply Hpath.
+- left; exists path. eapply dfs_sound, H.
+Defined.
 
 End Depth_first_search.
 
