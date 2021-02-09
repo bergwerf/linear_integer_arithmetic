@@ -91,6 +91,15 @@ rewrite app_nil_l; apply last_cons.
 rewrite <-app_comm_cons, last_cons; apply IHl1.
 Qed.
 
+Theorem split_list {X} (x : X) l :
+  In x l -> ∃l1 l2, l = l1 ++ x :: l2.
+Proof.
+induction l; intros. easy. inv H.
+- exists [], l; easy.
+- apply IHl in H0 as [l1 [l2 H]].
+  exists (a :: l1), l2; simpl; rewrite H; easy.
+Qed.
+
 Notation lmax l := (fold_right max 0 l).
 
 Theorem lmax_in n l :
@@ -223,15 +232,13 @@ Section List_constructions_using_decidability.
 Variable X : Type.
 Hypothesis dec : ∀x y : X, {x = y} + {x ≠ y}.
 
-Theorem split_list (x : X) l :
-  Σ l1 l2, x :: l = l1 ++ x :: l2 /\ ¬In x l2.
+Theorem split_at_last_instance (x : X) l :
+  In x l -> ∃l1 l2, l = l1 ++ x :: l2 /\ ¬In x l2.
 Proof.
-induction l. exists [], []; easy.
-destruct IHl as [l1 [l2 [H1 H2]]], (dec a x); subst.
-- rewrite H1. exists (x :: l1), l2; easy.
-- destruct l1; simpl in H1; inv H1.
-  exists [], (a :: l2); simpl; split; [easy|intros []; easy].
-  exists (x0 :: a :: l1), l2; easy.
+induction l; intros. easy. inv H.
+destruct (in_dec dec x l) as [H0|H0].
+1,3: apply IHl in H0 as [l1 [l2 []]]; rewrite H.
+1: exists (x :: l1), l2. 2: exists (a :: l1), l2. 3: exists [], l. all: easy.
 Qed.
 
 Section Powerset.
@@ -328,22 +335,24 @@ End Filtering.
 
 Section Intersection_and_subtraction.
 
-Variable l l' : list X.
+Section Definition_using_pfilter.
+
+Variable l s : list X.
 
 Definition intersect :=
-  pfilter (λ x, In x l') (λ x, in_dec dec x l') l.
+  pfilter (λ x, In x s) (λ x, in_dec dec x s) l.
 
 Definition subtract :=
-  pfilter (λ x, ¬In x l') (λ x, not_dec _ (in_dec dec x l')) l. 
+  pfilter (λ x, ¬In x s) (λ x, not_dec _ (in_dec dec x s)) l. 
 
 Corollary intersect_spec x :
-  In x intersect <-> In x l /\ In x l'.
+  In x intersect <-> In x l /\ In x s.
 Proof.
 apply pfilter_spec.
 Qed.
 
 Corollary subtract_spec x :
-  In x subtract <-> In x l /\ ¬In x l'.
+  In x subtract <-> In x l /\ ¬In x s.
 Proof.
 apply pfilter_spec.
 Qed.
@@ -352,7 +361,7 @@ Theorem subtract_length :
   length subtract = length l - length intersect.
 Proof.
 unfold subtract, intersect; induction l; simpl pfilter. easy.
-destruct (in_dec dec a l'), (not_dec _ _); try easy.
+destruct (in_dec _), (not_dec _ _); try easy.
 simpl length; rewrite IHl0; clear IHl0. remember (pfilter _ _ l0) as l1.
 assert(length l1 <= length l0) by (subst; apply pfilter_length).
 rewrite <-Nat.sub_succ_l. reflexivity. easy.
@@ -364,6 +373,37 @@ Proof.
 rewrite subtract_length.
 assert(length intersect <= length l) by apply pfilter_length.
 symmetry; apply Nat.add_sub_eq_l, Nat.sub_add, H.
+Qed.
+
+End Definition_using_pfilter.
+
+Theorem subtract_length_le_cons_r x a b :
+  length (subtract a (x :: b)) <= length (subtract a b).
+Proof.
+induction a; simpl. easy.
+destruct (dec _), (in_dec _); simpl.
+2: apply le_S. 4: apply le_n_S. all: apply IHa.
+Qed.
+
+Theorem length_subtract_le_incl_r a b c :
+  (∀x, In x b -> In x c) ->
+  length (subtract a c) <= length (subtract a b).
+Proof.
+induction a; simpl; intros. easy.
+destruct (in_dec _), (in_dec _); simpl.
+2: apply le_S. 4: apply le_n_S.
+3: exfalso; apply n, H, i. all: apply IHa, H.
+Qed.
+
+Theorem subtract_length_lt_cons_r x a b :
+  In x a -> ¬In x b ->
+  length (subtract a (x :: b)) < length (subtract a b).
+Proof.
+induction a; simpl; intros. easy.
+destruct H, (dec _), (in_dec _); subst; simpl; try easy.
+apply Lt.le_lt_n_Sm, subtract_length_le_cons_r.
+1: apply Nat.lt_lt_succ_r. 3: apply Lt.lt_n_S.
+all: apply IHa; easy.
 Qed.
 
 End Intersection_and_subtraction.
