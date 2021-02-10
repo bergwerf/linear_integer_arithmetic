@@ -145,7 +145,7 @@ Proof.
 intros [A det size [Q [Q_len Q_spec]] dec spec].
 eapply Regular.
 - apply Automata.pow_det
-  with (A:=Automata.sat _ (Automata.proj _ A _ proj) zero size)(Q:=Q).
+  with (A:=Automata.sat _ (Automata.proj _ A _ proj) zero size dec)(Q:=Q).
 - apply Automata.pow_size.
 - simpl; apply Automata.pow_dec.
 - intros; simpl.
@@ -153,7 +153,7 @@ eapply Regular.
   rewrite Automata.pow_spec, Automata.sat_spec.
   rewrite ex_iff. 2: intros; apply Automata.proj_spec. simpl.
   (* Prove specification hypotheses. *)
-  Unshelve. 2,5: apply dec. 2: exists Q. 2,3: easy.
+  Unshelve. 4: apply dec. 2: exists Q. 2,3: easy.
   (* Prove correctness. *)
   split.
   + (* Given a word for φ, compute the witness. *)
@@ -227,7 +227,7 @@ induction φ; simpl.
 Defined.
 
 Theorem Automatic_Realizes_dec φ :
-  Automatic φ -> {∃Γ, Model |= (φ)[Γ]} + {∀Γ, Model |= (¬`φ)[Γ]}.
+  Automatic φ -> (Σ Γ, Model |= (φ)[Γ]) + {∀Γ, Model |= (¬`φ)[Γ]}.
 Proof.
 intros [n [use reg]].
 apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
@@ -248,7 +248,7 @@ Defined.
 
 Corollary automatic_structure_dec φ :
   (∀a, Automatic (wff_atom a)) ->
-  {∃Γ, Model |= (φ)[Γ]} + {∀Γ, Model |= (¬`φ)[Γ]}.
+  (Σ Γ, Model |= (φ)[Γ]) + {∀Γ, Model |= (¬`φ)[Γ]}.
 Proof.
 intros H; apply Automatic_Realizes_dec, automatic_structure, H.
 Defined.

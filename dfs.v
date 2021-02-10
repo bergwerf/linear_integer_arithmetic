@@ -315,8 +315,29 @@ destruct (dfs graph_size visited v) as [visited'|path] eqn:H.
 - left; exists path. eapply dfs_sound, H.
 Defined.
 
+Section Proof_utilities.
+
+Theorem DFS_solution_refl v :
+  accept v = true -> DFS_solution [] v [].
+Proof.
+repeat split. apply RTC_refl.
+apply Forall_forall; easy. apply H.
+Qed.
+
+Theorem DFS_solution_cons v w path :
+  DFS_solution [] w path -> In w (next v) -> DFS_solution [] v (w :: path).
+Proof.
+intros [[]] Hw; repeat split.
+apply RTC_cons; easy. apply Forall_forall; easy.
+rewrite last_cons; apply H1.
+Qed.
+
+End Proof_utilities.
+
 End Depth_first_search.
 
 End Path_search.
 
 Arguments dfs {_}.
+Arguments DFS_path {_}.
+Arguments DFS_solution {_}.

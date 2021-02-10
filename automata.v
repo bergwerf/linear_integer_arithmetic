@@ -1,7 +1,7 @@
 (* Basic theory of automata. *)
 
 Require Import Utf8 Bool PeanoNat List Eqdep_dec.
-From larith Require Import tactics notations utilities path.
+From larith Require Import tactics notations utilities dfs.
 Import ListNotations.
 
 Record automaton (letter : Set) := Automaton {
@@ -393,85 +393,72 @@ Section Saturation.
 
 Variable A : automaton letter.
 Variable p : letter.
-Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
-
-Fixpoint sat_accept n s : bool :=
-  match n with
-  | 0 => false
-  | S m => accept A s || existsb (sat_accept m) (trans A p s)
-  end.
-
-(* Define early accept states using graph connectivity. *)
-Section Early_accept_states.
-
-Variable Q : list (state A).
-Hypothesis Q_spec : ∀s, In s Q.
-
-Definition Early_accept := Connected (trans A p) (λ s, accept A s = true) Q.
-Notation suffix_path := (path (trans A p) (λ s, accept A s = true) Q).
-
-Theorem Early_accept_complete s n :
-  Accepts A (repeat p n) [s] -> Early_accept s.
-Proof.
-revert s; induction n; simpl; intros.
-- rewrite orb_false_r in H; apply conn, path_stop, H.
-- rewrite app_nil_r in H; apply Accepts_determine in H as [t [Hs Ht]].
-  apply IHn in Ht as [path]. apply conn, path_step with (w:=t); easy.
-Qed.
-
-Theorem sat_accept_sound n s :
-  sat_accept n s = true -> ∃n, Accepts A (repeat p n) [s].
-Proof.
-revert s; induction n; simpl; intros. easy. b_Prop.
-- exists 0; simpl. rewrite e; easy.
-- apply existsb_exists in e as [t [Hs Ht]].
-  apply IHn in Ht as [m Ht]; exists (S m); simpl.
-  rewrite app_nil_r; apply Accepts_determine; exists t; easy.
-Qed.
-
-Theorem sat_accept_complete s (path : suffix_path s) :
-  sat_accept (1 + path_length path) s = true.
-Proof.
-induction path; simpl. now rewrite f.
-b_Prop; right. apply existsb_exists; exists w; easy.
-Qed.
-
-Lemma sat_accept_weaken m n s :
-  sat_accept m s = true -> m <= n -> sat_accept n s = true.
-Proof.
-revert n s; induction m; simpl; intros.
-easy. destruct n; simpl. easy. b_Prop. now left. right.
-apply existsb_exists in e as [t H]; apply existsb_exists; exists t.
-split. easy. apply IHm. easy. apply le_S_n, H0.
-Qed.
-
-Theorem sat_accept_spec s :
-  existsb (sat_accept (1 + length Q)) s = true <->
-  ∃n, Accepts A (repeat p n) s.
-Proof.
-rewrite existsb_exists; split; intros [i H].
-- destruct H as [Hs Hi]. apply sat_accept_sound in Hi as [n Hn]; exists n.
-  apply Accepts_determine; exists i; easy.
-- apply Accepts_determine in H as [t [Hs Ht]]; exists t; split. easy.
-  apply Early_accept_complete in Ht as [path].
-  apply short_path in path as [spath H].
-  eapply sat_accept_weaken. apply sat_accept_complete.
-  apply le_n_S, H. apply dec.
-Qed.
-
-End Early_accept_states.
-
 Variable size : nat.
 Hypothesis finite : Finite A size.
+Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
-Definition sat := Automaton _ _ (start A) (sat_accept (S size)) (trans A).
+Notation solve := (dfs (trans A p) (accept A) dec size []).
+Notation Solution := (DFS_solution (trans A p) (accept A) dec []).
+
+Definition sat_accept s :=
+  match solve s with
+  | inl _ => false
+  | inr _ => true
+  end.
+
+Definition sat := Automaton _ _ (start A) sat_accept (trans A).
+
+Lemma sat_Solution_Accepts path s :
+  Solution s path -> Accepts A (repeat p (length path)) [s].
+Proof.
+revert s; induction path; simpl; intros; destruct H as [[]].
+- simpl in H1; rewrite H1; easy.
+- rewrite app_nil_r; inv H. apply in_remove in H6 as [H6 _].
+  apply Accepts_determine; exists a; split; [easy|].
+  apply IHpath; repeat split. easy. inv H0.
+  rewrite last_cons in H1; easy.
+Qed.
+
+Lemma Accepts_sat_Solution n s :
+  Accepts A (repeat p n) [s] -> ∃path, Solution s path.
+Proof.
+revert s; induction n; simpl; intros.
+- rewrite orb_false_r in H; exists []; apply DFS_solution_refl; easy.
+- rewrite app_nil_r in H; apply Accepts_determine in H as [t []].
+  apply IHn in H0 as [path H0]. destruct (dec t s); subst.
+  exists path; apply H0. exists (t :: path).
+  apply DFS_solution_cons; [apply H0|apply in_in_remove; easy].
+Qed.
+
+Theorem sat_solve_sound s path :
+  solve s = inr path -> Accepts A (repeat p (length path)) [s].
+Proof.
+intros; apply dfs_sound in H.
+apply sat_Solution_Accepts, H.
+Qed.
+
+Theorem sat_solve_complete n s :
+  Accepts A (repeat p n) [s] -> ∃path, solve s = inr path.
+Proof.
+intros; apply Accepts_sat_Solution in H as [path H].
+destruct finite as [Q [Q_len Q_spec]].
+apply dfs_complete with (graph:=Q)(path:=path). apply Q_spec.
+rewrite subtract_length, Q_len; apply Nat.le_sub_l. apply H.
+Qed.
 
 Theorem sat_Accepts word s :
   Accepts sat word s <-> ∃n, Accepts A (word ++ repeat p n) s.
 Proof.
 revert s; induction word as [|c w]; simpl; intros.
-- destruct finite as [Q [Q_len Q_spec]].
-  rewrite <-Q_len; apply sat_accept_spec; easy.
+- unfold sat_accept; rewrite existsb_exists; split.
+  + intros [t []].
+    destruct (solve _) eqn:Ht; [easy|].
+    exists (length l); apply Accepts_determine.
+    exists t; split; [easy|apply sat_solve_sound, Ht].
+  + intros [n Hn];
+    apply Accepts_determine in Hn as [t []]. exists t; split; [easy|].
+    apply sat_solve_complete in H0 as [path H0].
+    rewrite H0; reflexivity.
 - apply IHw.
 Qed.
 
@@ -498,63 +485,37 @@ Variable alphabet : list letter.
 Hypothesis full_alphabet : ∀c, In c alphabet.
 
 Variable A : automaton letter.
-Hypothesis state_dec : ∀s t : state A, {s = t} + {s ≠ t}.
+Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
-(* Reduce finding an accepting word to connectivity to an accept state. *)
-Section Connectivity_to_an_accept_state.
+Definition trans_adj s := nodup dec (flat_map (λ c, trans A c s) alphabet).
+Definition Accepting := DFS_solution trans_adj (accept A) dec [].
 
-Variable Q : list (state A).
-Hypothesis Q_spec : ∀s, In s Q.
-
-Definition trans_adj s := flat_map (λ c, trans A c s) alphabet.
-Definition Acceptable := Connected trans_adj (λ s, accept A s = true) Q.
-
-Theorem Acceptable_Accepts s :
-  Acceptable s -> ∃w, Accepts A w [s].
+Theorem Accepting_Accepts s path :
+  Accepting s path -> Σ w, Accepts A w [s].
 Proof.
-intros [p]; induction p.
-- exists nil; simpl; now rewrite f.
-- apply in_flat_map in i0 as [c [_ Hc]].
-  destruct IHp as [w' Hw]; exists (c :: w'); simpl.
-  rewrite app_nil_r; apply Accepts_determine; exists w; easy.
-Qed.
+Admitted.
 
-Theorem Accepts_Acceptable s w :
-  Accepts A w [s] -> Acceptable s.
+Theorem Accepts_Accepting s w :
+  Accepts A w [s] -> ∃path, Accepting s path.
 Proof.
-revert s; induction w as [|c w]; simpl; intros.
-- rewrite orb_false_r in H. now apply conn, path_stop.
-- rewrite app_nil_r in H.
-  apply Accepts_determine in H as [t [Ht Hw]].
-  apply IHw in Hw as [p].
-  apply conn, path_step with (w:=t). easy.
-  apply in_flat_map; exists c; easy. easy.
-Qed.
-
-Theorem Acceptable_dec s :
-  {Acceptable s} + {¬Acceptable s}.
-Proof.
-apply Connected_dec. apply state_dec.
-intros v; destruct (accept A v); auto.
-Defined.
-
-End Connectivity_to_an_accept_state.
+Admitted.
 
 Variable size : nat.
 Hypothesis finite : Finite A size.
 
 Theorem Accepts_inhabited_dec s :
-  {∃w, Accepts A w [s]} + {∀w, ¬Accepts A w [s]}.
+  (Σ w, Accepts A w [s]) + {∀w, ¬Accepts A w [s]}.
 Proof.
-destruct finite as [Q [_ Q_spec]].
-destruct (Acceptable_dec Q s).
-- left; eapply Acceptable_Accepts, a.
-- right; intros w; eapply contra. apply Accepts_Acceptable.
-  apply Q_spec. easy.
+assert(fin : ∃Q, length Q = size /\ ∀t : state A, In t Q).
+destruct finite as [Q HQ]; exists Q; apply HQ.
+destruct (depth_first_search _ trans_adj (accept A) dec size fin [] s).
+- destruct s0 as [path H]; left; eapply Accepting_Accepts. apply H.
+- right; intros w Hw. apply Accepts_Accepting in Hw as [path H].
+  apply n with (path:=path), H.
 Defined.
 
 Corollary Language_inhabited_dec :
-  {∃w, Language A w} + {∀w, ¬Language A w}.
+  (Σ w, Language A w) + {∀w, ¬Language A w}.
 Proof.
 apply Accepts_inhabited_dec.
 Defined.

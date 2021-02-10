@@ -320,7 +320,7 @@ Defined.
 End Regularity_of_BinR.
 
 Theorem BinR_dec φ :
-  {∃Γ, BinR |= (φ)[Γ]} + {∀Γ, BinR |= (¬`φ)[Γ]}.
+  (Σ Γ, BinR |= (φ)[Γ]) + {∀Γ, BinR |= (¬`φ)[Γ]}.
 Proof.
 apply automatic_structure_dec with (default:=0%N)(decode:=bnum)(encode:=bits).
 apply BinR_default.
@@ -331,11 +331,11 @@ Defined.
 
 (* The Grande Final Theorem! *)
 Theorem Nat_dec φ :
-  {∃Γ, Nat |= (φ)[Γ]} + {∀Γ, Nat |= (¬`φ)[Γ]}.
+  (Σ Γ, Nat |= (φ)[Γ]) + {∀Γ, Nat |= (¬`φ)[Γ]}.
 Proof.
 destruct convert_formula_to_rformula with (φ:=φ) as [ϕ ϕ_spec].
 destruct BinR_dec with (φ:=ϕ).
-- left; destruct e as [Γ HΓ].
+- left; destruct s as [Γ HΓ].
   exists (map N.to_nat Γ). apply ϕ_spec, NatR_BinR_isomorphism.
   erewrite map_map, map_ext. rewrite map_id; apply HΓ. apply N2Nat.id.
 - right; intros Γ HΓ.
@@ -375,8 +375,8 @@ Compute decide (0 ≤` 1 ∧` 1 ≤` 0 ∧` 0 ≠` 1).
 ```
 
 Slightly non-trivial examples (in particular quantifiers over more complex
-formulas) become unfeasible. I did not have the patience to let the following
-examples finish.
+formulas) become unfeasible. The first one finished in under one minute, and I
+stopped the second one after five minutes (I have no idea how long it will run).
 ```
 Compute decide ∀[0 <` 1 ∨` 1 <` 0].
 Compute decide ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ⟹ 0 =` 1]].
@@ -386,16 +386,15 @@ The terrible performance is of course entirely to blame on this implementation.
 There exist efficient implementations of this decision procedure which could
 easily evaluate the above examples.
 
-There are some opportunities to improve the performance without altering the
-construction in a fundamental way:
-+ The automaton construction could be separated from the specification.
-+ The path search could use a search depth and visited nodes list.
-
-It would also be interesting to (effectively) produce witnesses in Set. Note
-that the path search could directly use the automaton accept function, and that
-it could just use lists to represent paths (all properties can be deferred to
-its specification). Introducing binary trees probably doesn't make sense,
-because at that point there are other much more limiting factors.
+Ideas for improving the performance:
++ Determinization could be applied only when needed (negation).
++ Double negation (between universal quantifiers) could be removed.
++ The powerset construction could be altered such that the materialization of
+  the state space, and normalization of all states, is not needed. However this
+  would require reverting to automorphisms on the state space, which is a pain.
++ The automaton construction could be separated from the specification. However
+  I find the mixing of algorithms and specifications using dependent types to be
+  quite elegant.
 *)
 
 Example decide_a_formula_by_computation :

@@ -28,12 +28,12 @@ Hypothesis full_alphabet : ∀c, In c alphabet.
 Hypothesis is_regular : regular.
 
 Theorem regular_dec :
-  {∃w, P w} + {∀w, ¬P w}.
+  (Σ w, P w) + {∀w, ¬P w}.
 Proof.
 destruct is_regular as [A _ n size dec spec].
 edestruct Language_inhabited_dec with (A:=A).
 apply full_alphabet. apply dec. apply size.
-- left; destruct e as [w H]; exists w; apply spec, H.
+- left; destruct s as [w H]; exists w; apply spec, H.
 - right; intros; rewrite <-spec; apply n0.
 Defined.
 

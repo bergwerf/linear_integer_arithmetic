@@ -5,7 +5,6 @@ notations.v
 utilities.v
 vector.v
 binary.v
-path.v
 dfs.v
 
 automata.v
