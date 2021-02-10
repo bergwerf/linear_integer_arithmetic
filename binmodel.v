@@ -389,12 +389,11 @@ easily evaluate the above examples.
 Ideas for improving the performance:
 + Determinization could be applied only when needed (negation).
 + Double negation (between universal quantifiers) could be removed.
-+ The powerset construction could be altered such that the materialization of
-  the state space, and normalization of all states, is not needed. However this
-  would require reverting to automorphisms on the state space, which is a pain.
++ The powerset construction could use a state ordering to normalize (sort)
+  states. This avoids the need to materialize the state space.
 + The automaton construction could be separated from the specification. However
-  I find the mixing of algorithms and specifications using dependent types to be
-  quite elegant.
+  I find the mixing of value and specification using dependent types to be
+  quite elegant, and I doubt this change would have a significant impact.
 *)
 
 Example decide_a_formula_by_computation :
