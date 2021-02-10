@@ -476,8 +476,6 @@ End Automata.
 
 Arguments Automata.Image {_ _}.
 
-(* For any list of states, we can find a word that is accepted by it. *)
-(* The automaton must have a finite number of states. *)
 Section Decidability.
 
 Variable letter : Set.

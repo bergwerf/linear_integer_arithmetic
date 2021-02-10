@@ -223,6 +223,7 @@ destruct (in_dec dec z vis_c).
   intros; eapply dfs_inl_incl. apply Hw. apply H2, H0.
 Qed.
 
+(* If a solution exists, then, given enough fuel, dfs will also find one. *)
 Theorem dfs_complete vis_a n :
   length (diff graph vis_a) <= n ->
   ∀v path, DFS_solution vis_a v path -> Inr (dfs n vis_a v).
