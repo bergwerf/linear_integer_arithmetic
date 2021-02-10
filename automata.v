@@ -74,8 +74,7 @@ Proof.
 induction s; simpl; intros.
 - split; intros; exfalso.
   eapply not_Accepts_nil, H. now destruct H.
-- replace (a :: s) with ([a] ++ s) by easy.
-  rewrite Accepts_app, IHs. split.
+- rewrite cons_app, Accepts_app, IHs. split.
   + intros [H|[t H]]; [exists a|exists t]; split.
     now left. easy. now right. easy.
   + intros [t [[eq_t|Hs] Ht]]; subst. now left.

@@ -4,49 +4,6 @@ Require Import Utf8 PeanoNat List.
 From larith Require Import tactics notations utilities.
 Import ListNotations.
 
-Section Reflexive_transitive_closure.
-
-Variable X : Type.
-Variable R : X -> X -> Prop.
-
-Inductive RTC : list X -> Prop :=
-  | RTC_nil : RTC []
-  | RTC_refl x : RTC [x]
-  | RTC_cons x y l : RTC (y :: l) -> R x y -> RTC (x :: y :: l).
-
-Theorem RTC_trans l1 l2 d :
-  RTC l1 -> RTC (last l1 d :: l2) -> RTC (l1 ++ l2).
-Proof.
-induction l1; simpl; intros. inv H0.
-destruct l1; subst; simpl in *. easy.
-inv H; apply RTC_cons. apply IHl1; easy. easy.
-Qed.
-
-Theorem RTC_app_inv l1 l2 :
-  RTC (l1 ++ l2) -> RTC l1 /\ RTC l2.
-Proof.
-induction l1; simpl; intros.
-split; [apply RTC_nil|easy]. inv H.
-- apply eq_sym, app_eq_nil in H2 as [H1 H2]; subst.
-  split; [apply RTC_refl|apply RTC_nil].
-- rewrite H1 in H2; apply IHl1 in H2. split; [|easy].
-  destruct l1; [apply RTC_refl|inv H1; apply RTC_cons; easy].
-Qed.
-
-End Reflexive_transitive_closure.
-
-Arguments RTC {_}.
-
-Section Path_search.
-
-Notation Inr x := (∃r, x = inr r).
-
-Lemma Inr_inr {X Y} y :
-  Inr (@inr X Y y).
-Proof.
-exists y; reflexivity.
-Qed.
-
 Section Stateful_search.
 
 Variable X state solution : Type.
@@ -73,13 +30,6 @@ revert s; induction l1; simpl; intros. easy.
 destruct (check s a); [apply IHl1|easy].
 Qed.
 
-Corollary search_app_Inr s l1 l2 :
-  Inr (search s l1) -> Inr (search s (l1 ++ l2)).
-Proof.
-intros [y Hy]; rewrite search_app, Hy.
-exists y; reflexivity.
-Qed.
-
 Theorem search_inr_inv s l x y :
   search s l = inr (x, y) -> In x l /\ ∃t, check t x = inr y.
 Proof.
@@ -104,6 +54,7 @@ Notation diff x y := (subtract dec x y).
 Notation next v := (remove dec v (adj v)).
 Notation Path := (RTC (λ v w, In w (next v))).
 Notation Notin l := (λ x, ¬In x l).
+Notation Inr x := (∃r, x = inr r).
 
 Fixpoint dfs depth visited v : list node + list node :=
   match depth with
@@ -124,6 +75,12 @@ Definition DFS_solution visited v path :=
   DFS_path visited (v :: path) /\ accept (last path v) = true.
 
 Section Utilities.
+
+Theorem Inr_inr {X Y} y :
+  Inr (@inr X Y y).
+Proof.
+exists y; reflexivity.
+Qed.
 
 Theorem DFS_solution_refl visited v :
   ¬In v visited /\ accept v = true <-> DFS_solution visited v [].
@@ -314,9 +271,8 @@ clear H H0 H1 H2 H4 H5 H7 Hv Hn.
 remember (v :: vis_a) as vis_b; clear Heqvis_b vis_a.
 (* Split (next v) into (next1 ++ w :: next2). *)
 apply split_list in H9 as [next1 [next2 H9]]; rewrite H9.
-cut(Inr (search (dfs n) vis_b (next1 ++ [w]))). intros Hr.
-apply search_app_Inr with (l2:=next2) in Hr as [[u path'] Hr].
-rewrite <-app_assoc in Hr; simpl in Hr; rewrite Hr; apply Inr_inr.
+cut(Inr (search (dfs n) vis_b (next1 ++ [w]))). intros [[w' path']].
+rewrite cons_app, app_assoc, search_app, H; apply Inr_inr.
 clear H9 v; revert H' Hn'; revert vis_b.
 (* Do induction on the nodes that are checked before w. *)
 induction next1 as [|u]; simpl; intros.
@@ -368,8 +324,6 @@ destruct (dfs graph_size visited v) as [visited'|path] eqn:H.
 Defined.
 
 End Depth_first_search.
-
-End Path_search.
 
 Arguments dfs {_}.
 Arguments DFS_path {_}.

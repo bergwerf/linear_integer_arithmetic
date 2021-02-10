@@ -3,6 +3,7 @@
 tactics.v
 notations.v
 utilities.v
+mergesort.v
 vector.v
 binary.v
 dfs.v

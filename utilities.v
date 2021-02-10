@@ -65,9 +65,51 @@ End Predicates.
 End Laws_of_logic.
 
 (******************************************************************************)
-(* II. Various list utilities.                                                *)
+(* II. Lists witnessing a transitive path.                                    *)
+(******************************************************************************)
+Section Reflexive_transitive_closure.
+
+Variable X : Type.
+Variable R : X -> X -> Prop.
+
+Inductive RTC : list X -> Prop :=
+  | RTC_nil : RTC []
+  | RTC_refl x : RTC [x]
+  | RTC_cons x y l : RTC (y :: l) -> R x y -> RTC (x :: y :: l).
+
+Theorem RTC_trans l1 l2 d :
+  RTC l1 -> RTC (last l1 d :: l2) -> RTC (l1 ++ l2).
+Proof.
+induction l1; simpl; intros. inv H0.
+destruct l1; subst; simpl in *. easy.
+inv H; apply RTC_cons. apply IHl1; easy. easy.
+Qed.
+
+Theorem RTC_app_inv l1 l2 :
+  RTC (l1 ++ l2) -> RTC l1 /\ RTC l2.
+Proof.
+induction l1; simpl; intros.
+split; [apply RTC_nil|easy]. inv H.
+- apply eq_sym, app_eq_nil in H2 as [H1 H2]; subst.
+  split; [apply RTC_refl|apply RTC_nil].
+- rewrite H1 in H2; apply IHl1 in H2. split; [|easy].
+  destruct l1; [apply RTC_refl|inv H1; apply RTC_cons; easy].
+Qed.
+
+End Reflexive_transitive_closure.
+
+Arguments RTC {_}.
+
+(******************************************************************************)
+(* III. Various list utilities.                                               *)
 (******************************************************************************)
 Module ListUtils.
+
+Theorem cons_app {X} (x : X) l :
+  x :: l = [x] ++ l.
+Proof.
+easy.
+Qed.
 
 Theorem list_singleton {X} (l : list X) :
   length l = 1 -> ∃x, l = [x].
