@@ -12,6 +12,10 @@ Variable X : Type.
 Variable cmp : X -> X -> comparison.
 Notation Sorted := (Sorted cmp).
 
+Hypothesis cmp_opp : ∀x y, cmp x y = CompOpp (cmp y x).
+Hypothesis cmp_refl : ∀x, cmp x x = Eq.
+Hypothesis cmp_trans : ∀x y z, cmp x y = Lt -> cmp y z = Lt -> cmp x z = Lt.
+
 Fixpoint merge l1 l2 :=
   let fix merge_aux l2 :=
   match l1, l2 with
@@ -19,7 +23,7 @@ Fixpoint merge l1 l2 :=
   | _, [] => l1
   | x1 :: l1', x2 :: l2' =>
     match cmp x1 x2 with
-    | Eq => x1 :: merge l1' l2'
+    | Eq => merge l1' l2
     | Lt => x1 :: merge l1' l2
     | Gt => x2 :: merge_aux l2'
     end
