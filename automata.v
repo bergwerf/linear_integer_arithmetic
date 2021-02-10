@@ -423,11 +423,12 @@ Lemma Accepts_sat_Solution n s :
   Accepts A (repeat p n) [s] -> ∃path, Solution s path.
 Proof.
 revert s; induction n; simpl; intros.
-- rewrite orb_false_r in H; exists []; apply DFS_solution_refl; easy.
+- rewrite orb_false_r in H; exists []; apply DFS_global_solution_refl; easy.
 - rewrite app_nil_r in H; apply Accepts_determine in H as [t []].
   apply IHn in H0 as [path H0]. destruct (dec t s); subst.
   exists path; apply H0. exists (t :: path).
-  apply DFS_solution_cons; [apply H0|apply in_in_remove; easy].
+  apply DFS_global_solution_cons; split.
+  apply H0. apply in_in_remove; easy.
 Qed.
 
 Theorem sat_solve_sound s path :
@@ -486,17 +487,44 @@ Variable A : automaton letter.
 Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
 Definition trans_adj s := nodup dec (flat_map (λ c, trans A c s) alphabet).
-Definition Accepting := DFS_solution trans_adj (accept A) dec [].
+Notation Accepting := (DFS_solution trans_adj (accept A) dec []).
 
-Theorem Accepting_Accepts s path :
-  Accepting s path -> Σ w, Accepts A w [s].
+Definition find_letter (s t : state A) : option letter :=
+  find (λ c, if in_dec dec t (trans A c s) then true else false) alphabet.
+
+Fixpoint find_word s (path : list (state A)) :=
+  match path with
+  | [] => []
+  | t :: path' => find_letter s t :: find_word t path'
+  end.
+
+Theorem find_word_spec s path :
+  Accepting s path -> Accepts A (strip (find_word s path)) [s].
 Proof.
-Admitted.
+revert s; induction path as [|t path]; intros; simpl.
+apply DFS_global_solution_refl in H; rewrite H; easy.
+apply DFS_global_solution_cons in H as [].
+unfold find_letter; destruct (find _) as [c|] eqn:Hs; [|exfalso].
+- simpl; rewrite app_nil_r.
+  apply find_some in Hs; destruct (in_dec _); [|easy]; clear Hs.
+  apply Accepts_determine; exists t; split; [easy|]. apply IHpath, H.
+- apply in_remove in H0 as [H0 _]; 
+  apply nodup_In, in_flat_map in H0 as [c Hc].
+  apply find_none with (x:=c) in Hs. destruct (in_dec _); easy. easy.
+Qed.
 
-Theorem Accepts_Accepting s w :
+Theorem find_accepting_path s w :
   Accepts A w [s] -> ∃path, Accepting s path.
 Proof.
-Admitted.
+revert s; induction w as [|c w]; simpl; intros.
+- rewrite orb_false_r in H; exists []; apply DFS_global_solution_refl, H.
+- rewrite app_nil_r in H; apply Accepts_determine in H as [t []].
+  apply IHw in H0 as [path H0]. destruct (dec t s); subst.
+  exists path; apply H0. exists (t :: path).
+  apply DFS_global_solution_cons; split.
+  apply H0. apply in_in_remove. easy.
+  apply nodup_In, in_flat_map; exists c; easy.
+Qed.
 
 Variable size : nat.
 Hypothesis finite : Finite A size.
@@ -507,8 +535,11 @@ Proof.
 assert(fin : ∃Q, length Q = size /\ ∀t : state A, In t Q).
 destruct finite as [Q HQ]; exists Q; apply HQ.
 destruct (depth_first_search _ trans_adj (accept A) dec size fin [] s).
-- destruct s0 as [path H]; left; eapply Accepting_Accepts. apply H.
-- right; intros w Hw. apply Accepts_Accepting in Hw as [path H].
+- left; destruct s0 as [path H].
+  exists (strip (find_word s path)).
+  apply find_word_spec, H.
+- right; intros w Hw.
+  apply find_accepting_path in Hw as [path H].
   apply n with (path:=path), H.
 Defined.
 

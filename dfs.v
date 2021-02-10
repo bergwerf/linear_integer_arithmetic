@@ -113,8 +113,8 @@ Fixpoint dfs depth visited v : list node + list node :=
     else if accept v then inr []
     else match search (dfs n) (v :: visited) (next v)
     with
-    | inl vis     => inl vis
-    | inr (w, tr) => inr (w :: tr)
+    | inl visited'  => inl visited'
+    | inr (w, path) => inr (w :: path)
     end
   end.
 
@@ -122,6 +122,58 @@ Definition DFS_path visited path :=
   Path path /\ Forall (Notin visited) path.
 Definition DFS_solution visited v path :=
   DFS_path visited (v :: path) /\ accept (last path v) = true.
+
+Section Utilities.
+
+Theorem DFS_solution_refl visited v :
+  ¬In v visited /\ accept v = true <-> DFS_solution visited v [].
+Proof.
+split.
+- repeat split. apply RTC_refl.
+  apply Forall_cons; easy. simpl; apply H.
+- intros [[]]; inv H0.
+Qed.
+
+Theorem DFS_path_cons visited v w path :
+  DFS_path visited (w :: path) /\ ¬In v visited /\ In w (next v) <->
+  DFS_path visited (v :: w :: path).
+Proof.
+split.
+- intros [[] []]; repeat split.
+  apply RTC_cons; easy. apply Forall_cons; easy.
+- intros []; inv H; inv H0.
+Qed.
+
+Theorem DFS_path_incl vis_a vis_b path :
+  (∀v, In v vis_a -> In v vis_b) ->
+  DFS_path vis_b path -> DFS_path vis_a path.
+Proof.
+split. apply H0.
+eapply Forall_impl. 2: apply H0.
+intros v; apply contra, H.
+Qed.
+
+Corollary DFS_solution_cons visited v w path :
+  DFS_solution visited w path /\ ¬In v visited /\ In w (next v) <->
+  DFS_solution visited v (w :: path).
+Proof.
+unfold DFS_solution; rewrite <-DFS_path_cons, last_cons; easy.
+Qed.
+
+Corollary DFS_global_solution_refl v :
+  accept v = true <-> DFS_solution [] v [].
+Proof.
+rewrite <-DFS_solution_refl; easy.
+Qed.
+
+Corollary DFS_global_solution_cons v w path :
+  DFS_solution [] w path /\ In w (next v) <->
+  DFS_solution [] v (w :: path).
+Proof.
+rewrite <-DFS_solution_cons; easy.
+Qed.
+
+End Utilities.
 
 Section Soundness.
 
@@ -164,10 +216,10 @@ easy. destruct (dfs _) as [vis_c|] eqn:Hw.
 - apply IHws in Hs. apply Hs.
   intros; eapply dfs_inl_incl. apply Hw. apply H, H1.
   intros; apply H0; right; apply H1.
-- inv Hs; apply IHn in Hw as [[]]; repeat split.
-  apply RTC_cons; [apply H1|apply H0; now left].
-  apply Forall_cons. apply n0. eapply Forall_impl. 2: apply H2.
-  intros u; apply contra, H. rewrite last_cons; apply H3.
+- inv Hs; apply IHn in Hw.
+  apply DFS_solution_cons; split; split.
+  eapply DFS_path_incl; [apply H|apply Hw].
+  apply Hw. apply n0. apply H0; left; easy.
 Qed.
 
 End Soundness.
@@ -214,9 +266,8 @@ destruct (in_dec dec z vis_c).
 - (* If the recursive call visits z; use IHn. *)
   apply IHn in Hw as [path []]; try easy.
   exists (w :: path); split; [|rewrite last_cons; apply H4].
-  destruct H0; split. apply RTC_cons; [apply H0|apply H3, in_eq].
-  apply Forall_cons. easy. eapply Forall_impl. 2: apply H5.
-  intros u; eapply contra, H2.
+  apply DFS_path_cons; split. eapply DFS_path_incl; [apply H2|apply H0].
+  split. apply n0. apply H3, in_eq.
 - (* If it doesn't; use IHnextv. *)
   apply IHws with (vis_b:=vis_c); try easy.
   intros; apply H3; apply in_cons, H0.
@@ -315,25 +366,6 @@ destruct (dfs graph_size visited v) as [visited'|path] eqn:H.
   congruence. apply graph_spec. apply Hpath.
 - left; exists path. eapply dfs_sound, H.
 Defined.
-
-Section Proof_utilities.
-
-Theorem DFS_solution_refl v :
-  accept v = true -> DFS_solution [] v [].
-Proof.
-repeat split. apply RTC_refl.
-apply Forall_forall; easy. apply H.
-Qed.
-
-Theorem DFS_solution_cons v w path :
-  DFS_solution [] w path -> In w (next v) -> DFS_solution [] v (w :: path).
-Proof.
-intros [[]] Hw; repeat split.
-apply RTC_cons; easy. apply Forall_forall; easy.
-rewrite last_cons; apply H1.
-Qed.
-
-End Proof_utilities.
 
 End Depth_first_search.
 

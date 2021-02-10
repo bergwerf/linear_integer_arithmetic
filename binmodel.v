@@ -353,7 +353,12 @@ Notation "i ≠` j" := (¬`(i =` j)) (at level 25).
 Notation "i <` j" := (i ≤` j ∧` i ≠` j) (at level 25).
 Notation Zero i   := (wff_atom (rel_zero i)).
 Notation One i    := (wff_atom (rel_one i)).
-Notation decide φ := (if BinR_dec φ then true else false).
+
+Definition solve φ :=
+  match BinR_dec φ with
+  | inleft (existT _ Γ _) => Some Γ
+  | inright _ => None
+  end.
 
 (*
 Evaluation
@@ -363,23 +368,24 @@ decision itself takes place in Set and can be evaluated, but I do not know how
 to retrieve the actual witness in Prop.
 
 Here are some examples of trivial valid formulae in the relational language that
-can be decided within a few seconds.
+can be solved within a few seconds.
 ```
-Compute decide ∃[One 0].
-Compute decide ∀[0 ≤` 0].
-Compute decide ∃[0 ≠` 0].
-Compute decide ∀[Zero 0].
-Compute decide (0 <` 1).
-Compute decide (0 <` 1 ∧` 1 <` 0).
-Compute decide (0 ≤` 1 ∧` 1 ≤` 0 ∧` 0 ≠` 1).
+Compute solve ∃[One 0].
+Compute solve ∀[0 ≤` 0].
+Compute solve ∃[0 ≠` 0].
+Compute solve ∀[Zero 0].
+Compute solve (0 <` 1).
+Compute solve (0 <` 1 ∧` 1 ≤` 2).
+Compute solve (0 ≤` 1 ∧` 1 ≤` 2).
+Compute solve (0 ≤` 1 ∧` 1 ≤` 0 ∧` 0 ≠` 1).
 ```
 
 Slightly non-trivial examples (in particular quantifiers over more complex
 formulas) become unfeasible. The first one finished in under one minute, and I
 stopped the second one after five minutes (I have no idea how long it will run).
 ```
-Compute decide ∀[0 <` 1 ∨` 1 <` 0].
-Compute decide ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ⟹ 0 =` 1]].
+Compute solve ∀[0 <` 1 ∨` 1 <` 0].
+Compute solve ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ⟹ 0 =` 1]].
 ```
 
 The terrible performance is of course entirely to blame on this implementation.
@@ -391,15 +397,11 @@ Ideas for improving the performance:
 + Double negation (between universal quantifiers) could be removed.
 + The powerset construction could use a state ordering to normalize (sort)
   states. This avoids the need to materialize the state space.
++ The depth-first search could use a tree to store visited states. I think that
+  is the point where trees would yield the most advantage.
 + The automaton construction could be separated from the specification. However
   I find the mixing of value and specification using dependent types to be
   quite elegant, and I doubt this change would have a significant impact.
 *)
-
-Example decide_a_formula_by_computation :
-  decide ∃[0 ≠` 0] = false.
-Proof.
-vm_compute; reflexivity.
-Qed.
 
 End Evaluation.
