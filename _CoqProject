@@ -6,6 +6,7 @@ utilities.v
 mergesort.v
 vector.v
 binary.v
+order.v
 dfs.v
 
 automata.v
