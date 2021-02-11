@@ -1,8 +1,7 @@
 (* Decision procedures for linear integer arithmetic. *)
 
 Require Import Utf8 List.
-From larith Require Import tactics notations utilities automata.
-Import ListNotations.
+From larith Require Import tactics notations utilities order automata.
 
 (* Definition of a regular predicate. *)
 Module Regularity.
@@ -12,14 +11,17 @@ Section A_regular_predicate.
 Variable letter : Set.
 Variable P : list letter -> Prop.
 
-(* P is regular iff its domain can be decided using a DFA. *)
+(* P is regular iff its domain can be decided using a finite automaton. *)
+(* An optional proof of determinism may be provided (for optimization). *)
+(* We also request that the automaton states are comparable. *)
 Record regular := Regular {
-  r_dfa    : automaton letter;
-  r_det    : Deterministic r_dfa;
+  r_fsa    : automaton letter;
   r_size   : nat;
-  r_finite : Finite r_dfa r_size;
-  r_dec    : ∀s t : state r_dfa, {s = t} + {s ≠ t};
-  r_spec   : ∀w, Language r_dfa w <-> P w;
+  r_finite : Finite r_fsa r_size;
+  r_spec   : ∀w, Language r_fsa w <-> P w;
+  r_det    : option (Deterministic r_fsa);
+  r_cmp    : state r_fsa -> state r_fsa -> comparison;
+  r_ord    : Order r_cmp;
 }.
 
 (* Regular predicates over a finite alphabet can be decided. *)
@@ -30,11 +32,11 @@ Hypothesis is_regular : regular.
 Theorem regular_dec :
   (Σ w, P w) + {∀w, ¬P w}.
 Proof.
-destruct is_regular as [A _ n size dec spec].
+destruct is_regular as [A size fin spec _ cmp ord].
 edestruct Language_inhabited_dec with (A:=A).
-apply full_alphabet. apply dec. apply size.
+apply full_alphabet. eapply ord_dec, ord. apply fin.
 - left; destruct s as [w H]; exists w; apply spec, H.
-- right; intros; rewrite <-spec; apply n0.
+- right; intros; rewrite <-spec; apply n.
 Defined.
 
 End A_regular_predicate.
@@ -45,28 +47,29 @@ Arguments regular {_}.
 Theorem regular_ext {letter : Set} (P Q : list letter -> Prop) :
   regular P -> (∀w, P w <-> Q w) -> regular Q.
 Proof.
-intros [A det size fin dec spec] H.
-eapply Regular with (r_dfa:=A).
-apply det. apply fin. apply dec.
-intros; rewrite <-H; apply spec.
+intros [A size fin spec det cmp ord] H.
+eapply Regular with (r_fsa:=A). apply fin.
+intros; rewrite <-H; apply spec. apply det. apply ord.
 Defined.
 
 (* Change the alphabet. *)
 Theorem regular_proj {letter letter' : Set} P Q (pr : letter' -> letter) :
   regular P -> (∀w, P (map pr w) <-> Q w) -> regular Q.
 Proof.
-intros [A det size fin dec spec] H.
+intros [A size fin spec det cmp ord] H.
 pose(B := Automata.proj _ A _ (λ c, [pr c])).
-eapply Regular with (r_dfa:=B).
-- apply Automata.proj_det; easy.
+eapply Regular with (r_fsa:=B).
 - apply fin.
-- apply dec.
 - intros. rewrite <-H, <-spec.
   unfold B; rewrite Automata.proj_spec.
   unfold Automata.Image; rewrite map_map_singleton. split.
   + intros [v [H1 H2]]. apply Forall2_In_singleton in H1; congruence.
   + intros Hfw; exists (map pr w); split.
     now apply Forall2_In_singleton. easy.
+- destruct det.
+  + apply Some, Automata.proj_det; [apply d|easy].
+  + apply None.
+- apply ord.
 Defined.
 
 Section Closure_under_logical_operations.
@@ -77,26 +80,29 @@ Variable P Q : list letter -> Prop.
 Theorem regular_conjunction :
   regular P -> regular Q -> regular (λ w, P w /\ Q w).
 Proof.
-intros [A detA sizeA finA decA specA] [B detB sizeB finB decB specB].
-eapply Regular with (r_dfa:=Automata.prod _ A B).
-- now apply Automata.prod_det.
+intros [A sizeA finA specA detA cmpA ordA];
+intros [B sizeB finB specB detB cmpB ordB].
+eapply Regular with (r_fsa:=Automata.prod _ A B)(r_cmp:=lex2 _ _ cmpA cmpB).
 - apply Automata.prod_size. apply finA. apply finB.
-- intros [s s'] [t t']. destruct (decA s t), (decB s' t'); subst.
-  now left. all: right; intros H; inv H.
 - intros; rewrite Automata.prod_spec, specA, specB; reflexivity.
+- destruct detA, detB. apply Some, Automata.prod_det; easy. all: apply None.
+- apply Order_lex2; easy.
 Defined.
 
 Theorem regular_negation :
   regular P -> regular (λ w, ¬P w).
 Proof.
-intros [A det size fin dec spec].
-eapply Regular with (r_dfa:=Automata.compl _ A).
-- apply det.
-- apply fin.
-- apply dec.
-- intros. rewrite Automata.compl_spec.
-  split; apply contra, spec. easy.
-Defined.
+intros [A size fin spec [det|] cmp ord].
+- (* A is deterministic. *)
+  eapply Regular with (r_fsa:=Automata.compl _ A).
+  + apply fin.
+  + intros; etransitivity.
+    apply Automata.compl_spec, det.
+    split; apply contra, spec.
+  + apply Some, det.
+  + apply ord.
+- (* A is not deterministic; use the powerset construction. *)
+Admitted.
 
 End Closure_under_logical_operations.
 

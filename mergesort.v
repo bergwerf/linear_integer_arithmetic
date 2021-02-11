@@ -4,9 +4,8 @@
 
 Require Import Utf8 List Permutation.
 From larith Require Import tactics notations utilities.
-Import ListNotations.
 
-Notation Sorted leb := (RTC (λ x y, leb x y = true)). 
+Notation Sorted leb := (RTC (λ x y, leb x y = true)).
 
 Section Merge_sort.
 

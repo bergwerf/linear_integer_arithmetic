@@ -3,7 +3,6 @@
 Require Vector.
 Require Import Utf8 PeanoNat List.
 From larith Require Import tactics notations.
-Import ListNotations.
 
 Module Vector_notations.
 

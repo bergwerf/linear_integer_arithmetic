@@ -2,7 +2,6 @@
 
 Require Import Utf8 List.
 From larith Require Import tactics notations utilities.
-Import ListNotations.
 
 (*
 A note on variable indices: To greatly simplify certain proofs, we do not use

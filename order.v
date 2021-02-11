@@ -6,17 +6,18 @@ From larith Require Import tactics notations utilities.
 Record Order {X} (cmp : X -> X -> comparison) := Order_spec {
   ord_eq : ∀x y, cmp x y = Eq <-> x = y;
   ord_opp : ∀x y, cmp x y = CompOpp (cmp y x);
-  ord_trans_lt : ∀x y z, cmp x y = Lt -> cmp y z = Lt -> cmp x z = Lt;
+  ord_lt_trans : ∀x y z, cmp x y = Lt -> cmp y z = Lt -> cmp x z = Lt;
 }.
 
 Arguments ord_eq {_ _}.
 Arguments ord_opp {_ _}.
-Arguments ord_trans_lt {_ _}.
+Arguments ord_lt_trans {_ _}.
 
 Theorem ord_swap {X cmp} (ord : Order cmp) c (x y : X) :
   cmp x y = c <-> cmp y x = CompOpp c.
 Proof.
-rewrite <-CompOpp_iff, <-(ord_opp ord); easy.
+rewrite (ord_opp ord).
+apply CompOpp_iff.
 Qed.
 
 Theorem ord_trans {X cmp} (ord : Order cmp) c (x y z : X) :
@@ -24,12 +25,64 @@ Theorem ord_trans {X cmp} (ord : Order cmp) c (x y z : X) :
 Proof.
 destruct c; intros.
 - apply (ord_eq ord) in H, H0; subst; apply (ord_eq ord); reflexivity.
-- apply (ord_trans_lt ord) with (y:=y); easy.
+- apply (ord_lt_trans ord) with (y:=y); easy.
 - apply (ord_swap ord); apply (ord_swap ord) in H, H0; simpl in *.
-  apply (ord_trans_lt ord) with (y:=y); easy.
+  apply (ord_lt_trans ord) with (y:=y); easy.
 Qed.
 
-Section Lexicographic_order_on_pairs.
+Theorem ord_dec {X} (cmp : X -> X -> comparison) :
+  Order cmp -> ∀x y : X, {x = y} + {x ≠ y}.
+Proof.
+intros [ord_eq _ _] x y.
+destruct (cmp x y) eqn:H. left; apply ord_eq, H.
+all: right; intros F; apply ord_eq in F; congruence.
+Qed.
+
+Section Ordering_small_domains.
+
+Definition cmp_unit (x y : unit) := Eq.
+Definition cmp_bool (x y : bool) :=
+  match x, y with
+  | true, true   => Eq
+  | true, false  => Gt
+  | false, true  => Lt
+  | false, false => Eq
+  end.
+
+Theorem Order_unit :
+  Order cmp_unit.
+Proof.
+Admitted.
+
+Theorem Order_bool :
+  Order cmp_bool.
+Proof.
+Admitted.
+
+End Ordering_small_domains.
+
+Section Add_an_undefined_element.
+
+Variable X : Type.
+Variable cmp : X -> X -> comparison.
+Variable ord : Order cmp.
+
+Definition cmp_option x1 x2 :=
+  match x1, x2 with
+  | None, None         => Eq
+  | None, Some _       => Lt
+  | Some _, None       => Gt
+  | Some x1', Some x2' => cmp x1' x2'
+  end.
+
+Theorem Order_option :
+  Order cmp_option.
+Proof.
+Admitted.
+
+End Add_an_undefined_element.
+
+Section Lexicographic_ordering_of_pairs.
 
 Variable A B : Type.
 Variable cmpA : A -> A -> comparison.
@@ -80,4 +133,30 @@ unfold lex2; split.
     now apply (ord_trans ordB) with (y:=b2).
 Qed.
 
-End Lexicographic_order_on_pairs.
+End Lexicographic_ordering_of_pairs.
+
+Section Lexicographic_ordering_of_lists.
+
+Variable X : Type.
+Variable cmp : X -> X -> comparison.
+Variable ord : Order cmp.
+
+Fixpoint lex l1 l2 :=
+  match l1, l2 with
+  | [], []     => Eq
+  | [], _ :: _ => Lt
+  | _ :: _, [] => Gt
+  | x1 :: l1', x2 :: l2' =>
+    match cmp x1 x2 with
+    | Eq => lex l1' l2'
+    | Lt => Lt
+    | Gt => Gt
+    end
+  end.
+
+Theorem Order_lex :
+  Order lex.
+Proof.
+Admitted.
+
+End Lexicographic_ordering_of_lists.

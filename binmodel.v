@@ -3,9 +3,8 @@
 Require Vector.
 Require Import Utf8 Bool List Lia.
 Require Import PeanoNat BinNat Nnat.
-From larith Require Import tactics notations utilities vector binary.
+From larith Require Import tactics notations utilities order vector binary.
 From larith Require Import formulae automata regular automatic.
-Import ListNotations.
 
 (* A model for the relational language on a domain of binary strings. *)
 Definition BinR (a : rel_atom) (Γ : list N) :=
@@ -210,12 +209,11 @@ Lemma regular_rel_zero i :
   regular (λ w : list (vec (S i)),
     BinR (rel_zero i) (ctx w)).
 Proof.
-eapply regular_ext. eapply regular_proj. eapply Regular.
-- apply Automata.opt_det with (A:=dfa_zero); intros.
-  simpl; destruct c; simpl; auto.
-- apply Automata.opt_size, finite_unit.
-- apply option_unit_dec.
+eapply regular_ext. eapply regular_proj. esplit.
+- apply Automata.opt_size with (A:=dfa_zero), finite_unit.
 - apply Automata.opt_spec.
+- apply Some, Automata.opt_det. intros []; auto.
+- apply Order_option, Order_unit.
 - intros; apply dfa_zero_spec.
 - intros; simpl. erewrite <-(fin_spec i i) at 2.
   rewrite vctx_nth; reflexivity. easy.
@@ -225,12 +223,11 @@ Lemma regular_rel_one i :
   regular (λ w : list (vec (S i)),
     BinR (rel_one i) (ctx w)).
 Proof.
-eapply regular_ext. eapply regular_proj. eapply Regular.
-- apply Automata.opt_det with (A:=dfa_one); intros.
-  simpl; destruct c, s; simpl; auto.
-- apply Automata.opt_size, finite_bool.
-- apply option_bool_dec.
+eapply regular_ext. eapply regular_proj. esplit.
+- apply Automata.opt_size with (A:=dfa_one), finite_bool.
 - apply Automata.opt_spec.
+- apply Some, Automata.opt_det. intros [] []; auto.
+- apply Order_option, Order_bool.
 - intros; apply dfa_one_spec.
 - intros; simpl. rewrite <-(fin_spec i i) at 2.
   rewrite vctx_nth; reflexivity. easy.
@@ -242,12 +239,11 @@ Lemma regular_rel_eq i j :
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
-eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
-- apply Automata.opt_det with (A:=dfa_eq); intros.
-  simpl; destruct c as [[] []], s; simpl; auto.
-- apply Automata.opt_size, finite_unit.
-- apply option_unit_dec.
+eapply regular_ext. eapply regular_proj with (pr:=f). esplit.
+- apply Automata.opt_size with (A:=dfa_eq), finite_unit.
 - apply Automata.opt_spec.
+- apply Some, Automata.opt_det. intros [[] []]; auto.
+- apply Order_option, Order_unit.
 - intros; apply dfa_eq_spec.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j).
@@ -261,11 +257,11 @@ Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
 eapply regular_proj with (pr:=f).
-eapply Regular with (r_dfa:=dfa_le).
-- easy.
+eapply Regular with (r_fsa:=dfa_le).
 - apply finite_bool.
-- apply bool_dec.
 - apply dfa_le_spec.
+- apply Some; easy.
+- apply Order_bool.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j).
   rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
@@ -278,12 +274,11 @@ Proof.
 remember (max (max i j) k) as n.
 pose(f (c : vec (S n)) :=
   ((vnth c (fin n i), vnth c (fin n j)), vnth c (fin n k))).
-eapply regular_ext. eapply regular_proj with (pr:=f). eapply Regular.
-- apply Automata.opt_det with (A:=dfa_add); intros.
-  simpl; destruct c as [[[] []] []], s; simpl; auto.
-- apply Automata.opt_size, finite_bool.
-- apply option_bool_dec.
+eapply regular_ext. eapply regular_proj with (pr:=f). esplit.
+- apply Automata.opt_size with (A:=dfa_add), finite_bool.
 - apply Automata.opt_spec.
+- apply Some, Automata.opt_det. intros [[[] []] []] []; auto.
+- apply Order_option, Order_bool.
 - intros; apply dfa_add_spec.
 - intros; simpl.
   rewrite <-(fin_spec n i), <-(fin_spec n j), <-(fin_spec n k).

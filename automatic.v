@@ -1,10 +1,9 @@
-(* Automata automatic structures. *)
+(* Building automata for automatic structures. *)
 
 Require Vector.
 Require Import Utf8 PeanoNat BinNat List Lia.
-From larith Require Import tactics notations utilities vector.
+From larith Require Import tactics notations utilities order vector.
 From larith Require Import formulae automata regular.
-Import ListNotations.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
 Section Decide_wff_using_automata.
@@ -142,18 +141,14 @@ Theorem regular_ex φ :
   regular (λ w : list (vec (S n)), Model |= (φ)[vctx w]) ->
   regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
 Proof.
-intros [A det size [Q [Q_len Q_spec]] dec spec].
-eapply Regular.
-- apply Automata.pow_det
-  with (A:=Automata.sat _ (Automata.proj _ A _ proj) zero size dec)(Q:=Q).
-- apply Automata.pow_size.
-- simpl; apply Automata.pow_dec.
+intros [A size fin spec det cmp ord].
+assert(dec := ord_dec cmp ord); eapply Regular with
+(r_fsa:=Automata.sat _ (Automata.proj _ A _ proj) zero size dec).
+- apply fin.
 - intros; simpl.
   (* Rewrite specification. *)
-  rewrite Automata.pow_spec, Automata.sat_spec.
-  rewrite ex_iff. 2: intros; apply Automata.proj_spec. simpl.
-  (* Prove specification hypotheses. *)
-  Unshelve. 4: apply dec. 2: exists Q. 2,3: easy.
+  etransitivity. apply Automata.sat_spec, fin.
+  etransitivity. apply ex_iff. intros; apply Automata.proj_spec. simpl.
   (* Prove correctness. *)
   split.
   + (* Given a word for φ, compute the witness. *)
@@ -188,6 +183,8 @@ eapply Regular.
       2: rewrite vlist_voflist_id; reflexivity.
       apply wd, decode_transpose_padding.
       all: unfold ts, hs, y; rewrite ?app_length, ?repeat_length; lia.
+- apply None.
+- apply ord.
 Defined.
 
 End Regularity_of_existential_quantification.
@@ -201,7 +198,7 @@ induction φ; simpl.
   apply automatic_atoms.
 - (* Negation: flip accept states. *)
   destruct IHφ as [n [use reg]]; exists n; split.
-  apply Use_not, use. apply regular_negation, reg.
+  apply Use_not, use. admit.
 - (* Conjunction: project on a common alphabet and use the product. *)
   destruct IHφ1 as [n1 [use1 reg1]], IHφ2 as [n2 [use2 reg2]].
   exists (max n1 n2); split; simpl.
@@ -224,7 +221,7 @@ induction φ; simpl.
     exists n; split.
     apply Use_ex, use.
     apply regular_ex, reg.
-Defined.
+Admitted.
 
 Theorem Automatic_Realizes_dec φ :
   Automatic φ -> (Σ Γ, Model |= (φ)[Γ]) + {∀Γ, Model |= (¬`φ)[Γ]}.

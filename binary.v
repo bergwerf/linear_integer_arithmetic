@@ -3,7 +3,6 @@
 Require Import Utf8 Bool List.
 Require Import BinNat BinPos Nnat.
 From larith Require Import tactics notations utilities.
-Import ListNotations.
 
 Open Scope N.
 

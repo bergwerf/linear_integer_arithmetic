@@ -2,6 +2,7 @@
 
 Require Vector.
 Require Import Utf8 List.
+Export ListNotations.
 
 (* Sigma types. *)
 Notation "'Σ' x .. y , P" := (sigT (λ x, .. (sigT (λ y, P)) ..))

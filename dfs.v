@@ -2,7 +2,6 @@
 
 Require Import Utf8 PeanoNat List.
 From larith Require Import tactics notations utilities.
-Import ListNotations.
 
 Section Stateful_search.
 

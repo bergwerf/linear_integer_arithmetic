@@ -2,7 +2,6 @@
 
 Require Import Utf8 PeanoNat List.
 From larith Require Import tactics notations.
-Import ListNotations.
 
 (******************************************************************************)
 (* I. Laws of constructive propositional and predicate logic.                 *)
