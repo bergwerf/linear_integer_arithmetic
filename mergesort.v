@@ -20,10 +20,13 @@ Notation Sorted := (Sorted leb).
 Notation "x <= y" := (leb x y = true) (at level 70).
 Notation "x > y" := (leb x y = false) (at level 70).
 
+(* This is the only hypothesis needed to prove mergesort correct. *)
+Hypothesis leb_total : ∀x y, x <= y \/ y <= x.
+
 (* A merge-sort algorithm. *)
 (* Initial author: Hugo Herbelin, Oct 2009 *)
 (* Altered to the style of this repository. *)
-Section Merge_sort.
+Section Mergesort.
 
 Fixpoint merge l1 l2 :=
   let fix merge_aux l2 :=
@@ -57,14 +60,12 @@ Fixpoint merge_iter stack l :=
   | x :: l' => merge_iter (merge_push stack [x]) l'
   end.
 
-Definition merge_sort := merge_iter [].
+Definition mergesort := merge_iter [].
 
 (** The proof of correctness *)
 
 Notation Sorted_stack stack := (Forall Sorted (strip stack)).
 Notation flatten stack := (concat (strip stack)).
-
-Hypothesis leb_total : ∀x y, x <= y \/ y <= x.
 
 Local Lemma leb_false x y :
   x > y -> y <= x.
@@ -111,8 +112,8 @@ apply Sorted_stack_merge_all, H.
 apply IHl, Sorted_stack_merge_push. easy. constructor.
 Qed.
 
-Theorem Sorted_merge_sort l :
-  Sorted (merge_sort l).
+Theorem Sorted_mergesort l :
+  Sorted (mergesort l).
 Proof.
 apply Sorted_merge_iter; constructor.
 Qed.
@@ -163,22 +164,21 @@ apply Permutation_merge_push.
 apply IHl.
 Qed.
 
-Theorem Permutation_merge_sort l :
-  Permutation l (merge_sort l).
+Theorem Permutation_mergesort l :
+  Permutation l (mergesort l).
 Proof.
 apply (Permutation_merge_iter l []).
 Qed.
 
 End Permutation.
 
-End Merge_sort.
+End Mergesort.
 
 (*
-To prove merge-sort correct, leb has to be total. But we can forget about this
-property when showing that a sorted list without duplicated elements is unique.
-We do need that leb is transitive and anti-symmetric.
+To prove that a sorted list without duplicated elements is unique, we need that
+leb is transitive and anti-symmetric. We can also prove the correctness of an
+efficient deduplication function for sorted lists using these hypotheses.
 *)
-
 Hypothesis leb_trans : ∀x y z, x <= y -> y <= z -> x <= z.
 Hypothesis leb_asym : ∀x y, x <= y /\ y <= x <-> x = y.
 
@@ -218,7 +218,6 @@ revert l2; induction l1; destruct l2; intros. easy.
   split; intros; eapply in_cons in H2 as H3; apply H in H3; inv H3.
 Qed.
 
-(* It is easy to remove duplicated elements from a sorted list. *)
 Section Deduplication.
 
 Fixpoint dedup l :=
@@ -232,15 +231,15 @@ Fixpoint dedup l :=
   end.
 
 Theorem dedup_eqv l x :
-  Sorted l -> In x l <-> In x (dedup l).
+  Sorted l -> In x (dedup l) <-> In x l.
 Proof.
 intros Hsorted; induction l; simpl.
 easy. destruct l. easy. inv Hsorted.
 apply IHl in H1; destruct (leb x0 a) eqn:Ha.
 - assert(a = x0) by (apply leb_asym; easy); subst.
-  etransitivity. 2: apply H1. simpl; intuition.
+  etransitivity. apply H1. simpl; intuition.
 - symmetry; transitivity (a = x \/ In x (dedup (x0 :: l))).
-  easy. rewrite <-H1; reflexivity.
+  rewrite H1; reflexivity. easy.
 Qed.
 
 Lemma Sorted_cons_dedup x y l :
@@ -267,10 +266,22 @@ Proof.
 induction l; simpl; intros. constructor.
 inv H. constructor; [easy|constructor].
 apply IHl in H2 as IH; destruct (leb y a) eqn:H. easy.
-constructor; [|easy]. intros F; apply dedup_eqv in F; [|easy].
-apply Sorted_lt_hd in F; easy.
+constructor; [|easy]. intros F; apply dedup_eqv with (l:=y::_) in F.
+apply Sorted_lt_hd in F; easy. easy.
 Qed.
 
 End Deduplication.
+
+(* Deduplicated sorted lists are fixed points of dedup ∘ mergesort. *)
+Theorem dedup_mergesort_fixed_point l :
+  Sorted l -> NoDup l -> dedup (mergesort l) = l.
+Proof.
+intros; apply Sorted_NoDup_unique; try easy.
+- intros; etransitivity. apply dedup_eqv, Sorted_mergesort.
+  split; apply Permutation_in. apply Permutation_sym.
+  all: apply Permutation_mergesort.
+- apply Sorted_dedup, Sorted_mergesort.
+- apply NoDup_dedup, Sorted_mergesort.
+Qed.
 
 End Canonical_lists.
