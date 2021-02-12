@@ -1,7 +1,7 @@
 (* Decision procedures for linear integer arithmetic. *)
 
 Require Import Utf8 List.
-From larith Require Import tactics notations utilities order automata.
+From larith Require Import setup utilities order automata.
 
 (* Definition of a regular predicate. *)
 Module Regularity.

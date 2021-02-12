@@ -1,7 +1,7 @@
 (* Construction of orderings. *)
 
 Require Import Utf8 List.
-From larith Require Import tactics notations utilities.
+From larith Require Import setup utilities.
 
 Record Order {X} (cmp : X -> X -> comparison) := Order_spec {
   ord_eq : ∀x y, cmp x y = Eq <-> x = y;

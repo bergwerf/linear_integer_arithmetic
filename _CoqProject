@@ -1,7 +1,6 @@
 -R . larith
 
-tactics.v
-notations.v
+setup.v
 utilities.v
 mergesort.v
 vector.v

@@ -1,7 +1,7 @@
 (* Basic utilities for various purposes. *)
 
 Require Import Utf8 PeanoNat List.
-From larith Require Import tactics notations.
+From larith Require Import setup.
 
 (******************************************************************************)
 (* I. Laws of constructive propositional and predicate logic.                 *)

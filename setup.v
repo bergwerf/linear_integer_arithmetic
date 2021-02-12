@@ -1,6 +1,31 @@
-(* Some general purpose tactics. *)
+(* General purpose notations. *)
 
-Require Import Bool PeanoNat.
+Require Vector.
+Require Import Utf8 Bool List PeanoNat.
+Export ListNotations.
+
+(******************************************************************************)
+(* I. Global notations.                                                       *)
+(******************************************************************************)
+
+(* Sigma types. *)
+Notation "'Σ' x .. y , P" := (sigT (λ x, .. (sigT (λ y, P)) ..))
+  (at level 200, x binder, y binder, right associativity,
+  format "'[ ' '[ ' Σ  x .. y ']' ,  '/' P ']'") : type_scope.
+
+(* Functions on nat without importing the proofs *)
+Notation min := (Nat.min).
+Notation max := (Nat.max).
+
+(* Cartesian products. *)
+Notation "A × B" := (prod A B) (at level 100).
+
+(* Boolean vectors. *)
+Notation vec := (Vector.t bool).
+
+(******************************************************************************)
+(* II. Global tactics.                                                        *)
+(******************************************************************************)
 
 Ltac inv H := inversion H; subst; clear H; try easy.
 

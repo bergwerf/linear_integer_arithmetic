@@ -3,7 +3,7 @@
 Require Vector.
 Require Import Utf8 Bool List Lia.
 Require Import PeanoNat BinNat Nnat.
-From larith Require Import tactics notations utilities order vector binary.
+From larith Require Import setup utilities order vector binary.
 From larith Require Import formulae automata regular automatic.
 
 (* A model for the relational language on a domain of binary strings. *)

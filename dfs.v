@@ -1,7 +1,7 @@
 (* A depth-first search algorithm. *)
 
 Require Import Utf8 PeanoNat List.
-From larith Require Import tactics notations utilities.
+From larith Require Import setup utilities.
 
 Section Stateful_search.
 

@@ -1,7 +1,7 @@
 (* Algorithms for canonical lists, most notably a merge-sort function. *)
 
 Require Import Utf8 List Permutation.
-From larith Require Import tactics notations utilities.
+From larith Require Import setup utilities.
 
 Notation Sorted leb := (RTC (λ x y, leb x y = true)).
 

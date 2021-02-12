@@ -2,7 +2,7 @@
 
 Require Vector.
 Require Import Utf8 PeanoNat BinNat List Lia.
-From larith Require Import tactics notations utilities order vector.
+From larith Require Import setup utilities order vector.
 From larith Require Import formulae automata regular.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
