@@ -1,15 +1,19 @@
 -R . larith
 
-setup.v
-utilities.v
-mergesort.v
-vector.v
-binary.v
-order.v
-dfs.v
+A_setup.v
 
-automata.v
-regular.v
-formulae.v
-automatic.v
-binmodel.v
+B1_utils.v
+B2_vector.v
+B3_binary.v
+B4_order.v
+
+C1_sort.v
+C2_dfs.v
+
+D1_automaton.v
+D2_regular.v
+
+E1_formula.v
+E2_automatic.v
+
+F_binmodel.v

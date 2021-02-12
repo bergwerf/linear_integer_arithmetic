@@ -1,8 +1,7 @@
-(* LSB list bool encoding and decoding of binary numbers. *)
+(* Least-significant bit encoding and decoding of numbers. *)
 
-Require Import Utf8 Bool List.
-Require Import BinNat BinPos Nnat.
-From larith Require Import setup utilities.
+Require Import Bool BinNat BinPos Nnat.
+From larith Require Import A_setup B1_utils.
 
 Open Scope N.
 

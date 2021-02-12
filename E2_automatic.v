@@ -1,9 +1,9 @@
 (* Building automata for automatic structures. *)
 
 Require Vector.
-Require Import Utf8 PeanoNat BinNat List Lia.
-From larith Require Import setup utilities order vector.
-From larith Require Import formulae automata regular.
+Require Import PeanoNat BinNat Lia.
+From larith Require Import A_setup B1_utils B2_vector B4_order.
+From larith Require Import D1_automaton D2_regular E1_formula.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
 Section Decide_wff_using_automata.

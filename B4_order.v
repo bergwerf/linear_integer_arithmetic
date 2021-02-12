@@ -1,7 +1,6 @@
-(* Construction of orderings. *)
+(* Ordering using a comparison function. *)
 
-Require Import Utf8 List.
-From larith Require Import setup utilities.
+From larith Require Import A_setup B1_utils.
 
 Record Order {X} (cmp : X -> X -> comparison) := Order_spec {
   ord_eq : ∀x y, cmp x y = Eq <-> x = y;
@@ -90,7 +89,7 @@ Variable cmpB : B -> B -> comparison.
 Variable ordA : Order cmpA.
 Variable ordB : Order cmpB.
 
-Definition lex2 ab1 ab2 :=
+Definition cmp_pair ab1 ab2 :=
   match ab1, ab2 with
   | (a1, b1), (a2, b2) =>
     match cmpA a1 a2 with
@@ -100,19 +99,19 @@ Definition lex2 ab1 ab2 :=
     end
   end.
 
-Lemma lex2_Lt a1 b1 a2 b2 :
-  lex2 (a1, b1) (a2, b2) = Lt <->
+Lemma cmp_pair_Lt a1 b1 a2 b2 :
+  cmp_pair (a1, b1) (a2, b2) = Lt <->
   cmpA a1 a2 = Lt \/ cmpA a1 a2 = Eq /\ cmpB b1 b2 = Lt.
 Proof.
-unfold lex2; simpl.
+unfold cmp_pair; simpl.
 destruct (cmpA a1 a2), (cmpB b1 b2);
 split; intros []; auto; easy.
 Qed.
 
-Theorem Order_lex2 :
-  Order lex2.
+Theorem Order_pair :
+  Order cmp_pair.
 Proof.
-unfold lex2; split.
+unfold cmp_pair; split.
 - intros [a1 b1] [a2 b2]; simpl; split.
   + destruct (cmpA a1 a2) eqn:Ha, (cmpB b1 b2) eqn:Hb; try easy.
     apply (ord_eq ordA) in Ha; apply (ord_eq ordB) in Hb; subst; reflexivity.
@@ -124,7 +123,8 @@ unfold lex2; split.
   rewrite (ord_swap ordA) in Ha; rewrite (ord_swap ordB) in Hb;
   rewrite Ha, Hb; reflexivity.
 - intros [a1 b1] [a2 b2] [a3 b3]; simpl; intros.
-  apply lex2_Lt in H, H0; apply lex2_Lt; destruct H as [|[]], H0 as [|[]].
+  apply cmp_pair_Lt in H, H0; apply cmp_pair_Lt;
+  destruct H as [|[]], H0 as [|[]].
   + left; apply (ord_trans ordA) with (y:=a2); easy.
   + left; rewrite (ord_eq ordA) in H0; subst; easy.
   + left; rewrite (ord_eq ordA) in H; subst; easy.
@@ -141,21 +141,21 @@ Variable X : Type.
 Variable cmp : X -> X -> comparison.
 Variable ord : Order cmp.
 
-Fixpoint lex l1 l2 :=
+Fixpoint cmp_list l1 l2 :=
   match l1, l2 with
   | [], []     => Eq
   | [], _ :: _ => Lt
   | _ :: _, [] => Gt
   | x1 :: l1', x2 :: l2' =>
     match cmp x1 x2 with
-    | Eq => lex l1' l2'
+    | Eq => cmp_list l1' l2'
     | Lt => Lt
     | Gt => Gt
     end
   end.
 
-Theorem Order_lex :
-  Order lex.
+Theorem Order_list :
+  Order cmp_list.
 Proof.
 Admitted.
 

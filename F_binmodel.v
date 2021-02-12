@@ -1,10 +1,9 @@
 (* An automatic structure for rformula. *)
 
 Require Vector.
-Require Import Utf8 Bool List Lia.
-Require Import PeanoNat BinNat Nnat.
-From larith Require Import setup utilities order vector binary.
-From larith Require Import formulae automata regular automatic.
+Require Import Bool PeanoNat BinNat Nnat Lia.
+From larith Require Import A_setup B1_utils B2_vector B3_binary B4_order.
+From larith Require Import D1_automaton D2_regular E1_formula E2_automatic.
 
 (* A model for the relational language on a domain of binary strings. *)
 Definition BinR (a : rel_atom) (Γ : list N) :=

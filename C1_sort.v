@@ -1,7 +1,7 @@
-(* Algorithms for canonical lists, most notably a merge-sort function. *)
+(* Produce canonical lists using merge-sort and deduplication. *)
 
-Require Import Utf8 List Permutation.
-From larith Require Import setup utilities.
+Require Import Permutation.
+From larith Require Import A_setup B1_utils.
 
 Notation Sorted leb := (RTC (λ x y, leb x y = true)).
 

@@ -2,7 +2,7 @@
 
 Require Vector.
 Require Import Utf8 Bool List PeanoNat.
-Export ListNotations.
+Export Utf8 List ListNotations.
 
 (******************************************************************************)
 (* I. Global notations.                                                       *)

@@ -1,7 +1,6 @@
 (* Formulae and interpretations of Presburger arithmetic. *)
 
-Require Import Utf8 List.
-From larith Require Import setup utilities.
+From larith Require Import A_setup B1_utils.
 
 (*
 A note on variable indices: To greatly simplify certain proofs, we do not use

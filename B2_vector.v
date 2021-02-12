@@ -1,8 +1,8 @@
-(* Vector and matrix utilities. *)
+(* Theorems about vectors and matrix transposition. *)
 
 Require Vector.
-Require Import Utf8 PeanoNat List.
-From larith Require Import setup.
+Require Import PeanoNat.
+From larith Require Import A_setup.
 
 Module Vector_notations.
 

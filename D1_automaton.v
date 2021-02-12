@@ -1,7 +1,7 @@
-(* Basic theory of automata. *)
+(* Basic automata theory. *)
 
-Require Import Utf8 Bool PeanoNat List Eqdep_dec.
-From larith Require Import setup utilities order dfs.
+Require Import Bool PeanoNat Eqdep_dec.
+From larith Require Import A_setup B1_utils B4_order C1_sort C2_dfs.
 
 Record automaton (letter : Set) := Automaton {
   state  : Set;

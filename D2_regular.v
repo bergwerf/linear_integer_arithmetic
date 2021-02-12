@@ -1,7 +1,6 @@
-(* Decision procedures for linear integer arithmetic. *)
+(* A carrier type for regular predicates. *)
 
-Require Import Utf8 List.
-From larith Require Import setup utilities order automata.
+From larith Require Import A_setup B1_utils B4_order D1_automaton.
 
 (* Definition of a regular predicate. *)
 Module Regularity.
@@ -82,11 +81,11 @@ Theorem regular_conjunction :
 Proof.
 intros [A sizeA finA specA detA cmpA ordA];
 intros [B sizeB finB specB detB cmpB ordB].
-eapply Regular with (r_fsa:=Automata.prod _ A B)(r_cmp:=lex2 _ _ cmpA cmpB).
+eapply Regular with (r_fsa:=Automata.prod _ A B)(r_cmp:=cmp_pair _ _ cmpA cmpB).
 - apply Automata.prod_size. apply finA. apply finB.
 - intros; rewrite Automata.prod_spec, specA, specB; reflexivity.
 - destruct detA, detB. apply Some, Automata.prod_det; easy. all: apply None.
-- apply Order_lex2; easy.
+- apply Order_pair; easy.
 Defined.
 
 Theorem regular_negation :

@@ -1,7 +1,7 @@
-(* Basic utilities for various purposes. *)
+(* Theorems about basic logic and lists. *)
 
-Require Import Utf8 PeanoNat List.
-From larith Require Import setup.
+Require Import PeanoNat.
+From larith Require Import A_setup.
 
 (******************************************************************************)
 (* I. Laws of constructive propositional and predicate logic.                 *)
