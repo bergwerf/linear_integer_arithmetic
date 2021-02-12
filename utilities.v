@@ -76,6 +76,13 @@ Inductive RTC : list X -> Prop :=
   | RTC_refl x : RTC [x]
   | RTC_cons x y l : RTC (y :: l) -> R x y -> RTC (x :: y :: l).
 
+Theorem RTC_weaken x l :
+  RTC (x :: l) -> RTC l.
+Proof.
+destruct l; intros.
+constructor. inv H.
+Qed.
+
 Theorem RTC_trans l1 l2 d :
   RTC l1 -> RTC (last l1 d :: l2) -> RTC (l1 ++ l2).
 Proof.

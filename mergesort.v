@@ -1,16 +1,29 @@
-(* A merge-sort algorithm. *)
-(* Initial author: Hugo Herbelin, Oct 2009 *)
-(* Altered to the style of this repository. *)
+(* Algorithms for canonical lists, most notably a merge-sort function. *)
 
 Require Import Utf8 List Permutation.
 From larith Require Import tactics notations utilities.
 
 Notation Sorted leb := (RTC (λ x y, leb x y = true)).
 
-Section Merge_sort.
+(*
+The primary goal of this file is to supply an efficient algorithm to normalize
+lists of states in the powerset automaton construction. For the correctness of
+the depth-first search, a list containing all states must exist. To realize this
+we will represent states as sorted lists without duplicated elements.
+*)
+Section Canonical_lists.
 
 Variable X : Type.
 Variable leb : X -> X -> bool.
+
+Notation Sorted := (Sorted leb).
+Notation "x <= y" := (leb x y = true) (at level 70).
+Notation "x > y" := (leb x y = false) (at level 70).
+
+(* A merge-sort algorithm. *)
+(* Initial author: Hugo Herbelin, Oct 2009 *)
+(* Altered to the style of this repository. *)
+Section Merge_sort.
 
 Fixpoint merge l1 l2 :=
   let fix merge_aux l2 :=
@@ -48,12 +61,8 @@ Definition merge_sort := merge_iter [].
 
 (** The proof of correctness *)
 
-Notation Sorted := (Sorted leb).
 Notation Sorted_stack stack := (Forall Sorted (strip stack)).
 Notation flatten stack := (concat (strip stack)).
-
-Notation "x <= y" := (leb x y = true) (at level 70).
-Notation "x > y" := (leb x y = false) (at level 70).
 
 Hypothesis leb_total : ∀x y, x <= y \/ y <= x.
 
@@ -163,3 +172,105 @@ Qed.
 End Permutation.
 
 End Merge_sort.
+
+(*
+To prove merge-sort correct, leb has to be total. But we can forget about this
+property when showing that a sorted list without duplicated elements is unique.
+We do need that leb is transitive and anti-symmetric.
+*)
+
+Hypothesis leb_trans : ∀x y z, x <= y -> y <= z -> x <= z.
+Hypothesis leb_asym : ∀x y, x <= y /\ y <= x <-> x = y.
+
+Local Lemma leb_refl x :
+  x <= x.
+Proof.
+apply leb_asym; easy.
+Qed.
+
+Lemma Sorted_lt_hd x y l :
+  Sorted (y :: l) -> y > x -> ¬In x (y :: l).
+Proof.
+revert y; induction l; simpl; intros.
+- intros []; [subst|easy]. now rewrite leb_refl in H0.
+- inv H; intros []. subst; now rewrite leb_refl in H0.
+  apply IHl in H. easy. easy.
+  destruct (leb a x) eqn:Ha; [|easy].
+  rewrite leb_trans with (y:=a) in H0; easy.
+Qed.
+
+Theorem Sorted_NoDup_unique l1 l2 :
+  (∀x, In x l1 <-> In x l2) ->
+  Sorted l1 -> Sorted l2 ->
+  NoDup l1 -> NoDup l2 ->
+  l1 = l2.
+Proof.
+revert l2; induction l1; destruct l2; intros. easy.
+1,2: exfalso; eapply in_nil, H, in_eq. assert(a = x).
+- (* Prove a = x using leb_asym. *)
+  apply leb_asym; split.
+  + destruct (leb a x) eqn:F; [easy|exfalso].
+    eapply Sorted_lt_hd. apply H0. apply F. apply H, in_eq.
+  + destruct (leb x a) eqn:F; [easy|exfalso].
+    eapply Sorted_lt_hd. apply H1. apply F. apply H, in_eq.
+- (* Prove l1 = l2 using IHl. *)
+  apply RTC_weaken in H0, H1; inv H2; inv H3. apply wd, IHl1; try easy.
+  split; intros; eapply in_cons in H2 as H3; apply H in H3; inv H3.
+Qed.
+
+(* It is easy to remove duplicated elements from a sorted list. *)
+Section Deduplication.
+
+Fixpoint dedup l :=
+  match l with
+  | [] => []
+  | x :: l' =>
+    match l' with
+    | [] => [x]
+    | y :: l'' => if leb y x then dedup l' else x :: dedup l'
+    end
+  end.
+
+Theorem dedup_eqv l x :
+  Sorted l -> In x l <-> In x (dedup l).
+Proof.
+intros Hsorted; induction l; simpl.
+easy. destruct l. easy. inv Hsorted.
+apply IHl in H1; destruct (leb x0 a) eqn:Ha.
+- assert(a = x0) by (apply leb_asym; easy); subst.
+  etransitivity. 2: apply H1. simpl; intuition.
+- symmetry; transitivity (a = x \/ In x (dedup (x0 :: l))).
+  easy. rewrite <-H1; reflexivity.
+Qed.
+
+Lemma Sorted_cons_dedup x y l :
+  Sorted (y :: l) -> x <= y -> Sorted (x :: dedup (y :: l)).
+Proof.
+revert x y; induction l; intros. constructor; easy.
+replace (dedup _) with (if leb a y then dedup (a::l) else y :: dedup (a::l))
+by easy; inv H. destruct (leb a y) eqn:Ha.
+- apply IHl. easy. apply leb_trans with (y:=y); easy.
+- constructor. apply IHl. all: easy.
+Qed.
+
+Theorem Sorted_dedup l :
+  Sorted l -> Sorted (dedup l).
+Proof.
+induction l; simpl; intros. easy.
+inv H. constructor. destruct (leb y a). auto.
+apply Sorted_cons_dedup; easy.
+Qed.
+
+Theorem NoDup_dedup l :
+  Sorted l -> NoDup (dedup l).
+Proof.
+induction l; simpl; intros. constructor.
+inv H. constructor; [easy|constructor].
+apply IHl in H2 as IH; destruct (leb y a) eqn:H. easy.
+constructor; [|easy]. intros F; apply dedup_eqv in F; [|easy].
+apply Sorted_lt_hd in F; easy.
+Qed.
+
+End Deduplication.
+
+End Canonical_lists.
