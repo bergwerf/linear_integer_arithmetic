@@ -4,12 +4,13 @@ Require Import Permutation.
 From larith Require Import A_setup B1_utils.
 
 Notation Sorted leb := (RTC (λ x y, leb x y = true)).
+Notation Increasing leb := (RTC (λ x y, leb y x = false)).
 
 (*
 The primary goal of this file is to supply an efficient algorithm to normalize
 lists of states in the powerset automaton construction. For the correctness of
 the depth-first search, a list containing all states must exist. To realize this
-we will represent states as sorted lists without duplicated elements.
+we will represent states as strictly increasing lists.
 *)
 Section Canonical_lists.
 
@@ -17,16 +18,48 @@ Variable X : Type.
 Variable leb : X -> X -> bool.
 
 Notation Sorted := (Sorted leb).
+Notation Increasing := (Increasing leb).
+
 Notation "x <= y" := (leb x y = true) (at level 70).
 Notation "x > y" := (leb x y = false) (at level 70).
 
-(* This is the only hypothesis needed to prove mergesort correct. *)
+(* Proving `Sorted (mergesort l)` only requires totality. *)
 Hypothesis leb_total : ∀x y, x <= y \/ y <= x.
 
-(* A merge-sort algorithm. *)
-(* Initial author: Hugo Herbelin, Oct 2009 *)
-(* Altered to the style of this repository. *)
+(* Proving `Increasing (dedup l)` only requires anti-symmetry. *)
+Hypothesis leb_asym : ∀x y, x <= y /\ y <= x <-> x = y.
+
+(* Proving uniqueness of increasing lists uses the above + transitivity. *)
+Hypothesis leb_trans : ∀x y z, x <= y -> y <= z -> x <= z.
+
+(* These three hypotheses represent a linear order. *)
+Definition Linear_order :=
+  (∀x y, x <= y /\ y <= x <-> x = y) /\
+  (∀x y z, x <= y -> y <= z -> x <= z) /\
+  (∀x y, x <= y \/ y <= x).
+
+Local Lemma gt_leb x y :
+  x > y -> y <= x.
+Proof.
+destruct (leb_total y x); [easy|congruence].
+Qed.
+
+Local Lemma leb_refl x :
+  x <= x.
+Proof.
+apply leb_asym; easy.
+Qed.
+
+(******************************************************************************)
+(* I. A merge-sort algorithm.                                                 *)
+(******************************************************************************)
+(* Initial author: Hugo Herbelin, Oct 2009                                    *)
+(* This section only relies on the leb_total hypothesis.                      *)
+(******************************************************************************)
 Section Mergesort.
+
+Notation Sorted_stack stack := (Forall Sorted (strip stack)).
+Notation flatten stack := (concat (strip stack)).
 
 Fixpoint merge l1 l2 :=
   let fix merge_aux l2 :=
@@ -62,17 +95,6 @@ Fixpoint merge_iter stack l :=
 
 Definition mergesort := merge_iter [].
 
-(** The proof of correctness *)
-
-Notation Sorted_stack stack := (Forall Sorted (strip stack)).
-Notation flatten stack := (concat (strip stack)).
-
-Local Lemma leb_false x y :
-  x > y -> y <= x.
-Proof.
-destruct (leb_total y x); [easy|congruence].
-Qed.
-
 Section Sorted.
 
 Theorem Sorted_merge l1 l2 :
@@ -83,7 +105,7 @@ destruct (leb a a0) eqn:Heq1.
 - inv H. simpl; apply RTC_cons; easy.
   assert(IH := IHl1 _ H3 H0); simpl; simpl in IH.
   destruct (leb y a0); apply RTC_cons; easy.
-- apply leb_false in Heq1.
+- apply gt_leb in Heq1.
   inv H0. apply RTC_cons; easy.
   assert(IH := IHl2 H H3); simpl; simpl in IH.
   destruct (leb a y); apply RTC_cons; easy.
@@ -174,50 +196,11 @@ End Permutation.
 
 End Mergesort.
 
-(*
-To prove that a sorted list without duplicated elements is unique, we need that
-leb is transitive and anti-symmetric. We can also prove the correctness of an
-efficient deduplication function for sorted lists using these hypotheses.
-*)
-Hypothesis leb_trans : ∀x y z, x <= y -> y <= z -> x <= z.
-Hypothesis leb_asym : ∀x y, x <= y /\ y <= x <-> x = y.
-
-Local Lemma leb_refl x :
-  x <= x.
-Proof.
-apply leb_asym; easy.
-Qed.
-
-Lemma Sorted_lt_hd x y l :
-  Sorted (y :: l) -> y > x -> ¬In x (y :: l).
-Proof.
-revert y; induction l; simpl; intros.
-- intros []; [subst|easy]. now rewrite leb_refl in H0.
-- inv H; intros []. subst; now rewrite leb_refl in H0.
-  apply IHl in H. easy. easy.
-  destruct (leb a x) eqn:Ha; [|easy].
-  rewrite leb_trans with (y:=a) in H0; easy.
-Qed.
-
-Theorem Sorted_NoDup_unique l1 l2 :
-  (∀x, In x l1 <-> In x l2) ->
-  Sorted l1 -> Sorted l2 ->
-  NoDup l1 -> NoDup l2 ->
-  l1 = l2.
-Proof.
-revert l2; induction l1; destruct l2; intros. easy.
-1,2: exfalso; eapply in_nil, H, in_eq. assert(a = x).
-- (* Prove a = x using leb_asym. *)
-  apply leb_asym; split.
-  + destruct (leb a x) eqn:F; [easy|exfalso].
-    eapply Sorted_lt_hd. apply H0. apply F. apply H, in_eq.
-  + destruct (leb x a) eqn:F; [easy|exfalso].
-    eapply Sorted_lt_hd. apply H1. apply F. apply H, in_eq.
-- (* Prove l1 = l2 using IHl. *)
-  apply RTC_weaken in H0, H1; inv H2; inv H3. apply wd, IHl1; try easy.
-  split; intros; eapply in_cons in H2 as H3; apply H in H3; inv H3.
-Qed.
-
+(******************************************************************************)
+(* II. Deduplication of sorted lists.                                         *)
+(******************************************************************************)
+(* This section only relies on the leb_asym hypothesis.                       *)
+(******************************************************************************)
 Section Deduplication.
 
 Fixpoint dedup l :=
@@ -233,55 +216,201 @@ Fixpoint dedup l :=
 Theorem dedup_eqv l x :
   Sorted l -> In x (dedup l) <-> In x l.
 Proof.
-intros Hsorted; induction l; simpl.
-easy. destruct l. easy. inv Hsorted.
-apply IHl in H1; destruct (leb x0 a) eqn:Ha.
+intros; induction l; simpl.
+easy. destruct l. easy. inv H.
+apply IHl in H2; destruct (leb x0 a) eqn:Ha.
 - assert(a = x0) by (apply leb_asym; easy); subst.
-  etransitivity. apply H1. simpl; intuition.
+  etransitivity. apply H2. simpl; intuition.
 - symmetry; transitivity (a = x \/ In x (dedup (x0 :: l))).
-  rewrite H1; reflexivity. easy.
+  rewrite H2; reflexivity. easy.
 Qed.
 
-Lemma Sorted_cons_dedup x y l :
-  Sorted (y :: l) -> x <= y -> Sorted (x :: dedup (y :: l)).
+Lemma Increasing_cons_dedup x y l :
+  Sorted (y :: l) -> y > x -> Increasing (x :: dedup (y :: l)).
 Proof.
-revert x y; induction l; intros. constructor; easy.
+revert x y; induction l; intros. repeat constructor; easy.
 replace (dedup _) with (if leb a y then dedup (a::l) else y :: dedup (a::l))
-by easy; inv H. destruct (leb a y) eqn:Ha.
-- apply IHl. easy. apply leb_trans with (y:=y); easy.
+by easy; inv H; destruct (leb a y) eqn:Ha.
+- apply IHl. easy. assert(a = y) by (now apply leb_asym); subst; easy.
 - constructor. apply IHl. all: easy.
 Qed.
 
-Theorem Sorted_dedup l :
-  Sorted l -> Sorted (dedup l).
-Proof.
-induction l; simpl; intros. easy.
-inv H. constructor. destruct (leb y a). auto.
-apply Sorted_cons_dedup; easy.
-Qed.
-
-Theorem NoDup_dedup l :
-  Sorted l -> NoDup (dedup l).
+Theorem Increasing_dedup l :
+  Sorted l -> Increasing (dedup l).
 Proof.
 induction l; simpl; intros. constructor.
-inv H. constructor; [easy|constructor].
-apply IHl in H2 as IH; destruct (leb y a) eqn:H. easy.
-constructor; [|easy]. intros F; apply dedup_eqv with (l:=y::_) in F.
-apply Sorted_lt_hd in F; easy. easy.
+inv H. constructor. destruct (leb y a) eqn:Hy.
+auto. apply Increasing_cons_dedup; easy.
+Qed.
+
+Theorem length_dedup l :
+  (length (dedup l) <= length l)%nat.
+Proof.
+induction l. easy. destruct l. easy.
+replace (dedup _) with (if leb x a then dedup (x::l) else a :: dedup (x::l))
+by easy; destruct (leb _). apply le_S, IHl. apply le_n_S, IHl.
 Qed.
 
 End Deduplication.
 
-(* Deduplicated sorted lists are fixed points of dedup ∘ mergesort. *)
-Theorem dedup_mergesort_fixed_point l :
-  Sorted l -> NoDup l -> dedup (mergesort l) = l.
+(******************************************************************************)
+(* III. Uniqueness of increasing lists.                                       *)
+(******************************************************************************)
+Section Uniqueness.
+
+Lemma Increasing_le x y l :
+  Increasing (y :: l) -> x <= y -> ¬In x l.
 Proof.
-intros; apply Sorted_NoDup_unique; try easy.
-- intros; etransitivity. apply dedup_eqv, Sorted_mergesort.
-  split; apply Permutation_in. apply Permutation_sym.
-  all: apply Permutation_mergesort.
-- apply Sorted_dedup, Sorted_mergesort.
-- apply NoDup_dedup, Sorted_mergesort.
+revert y; induction l; simpl; intros. easy.
+inv H; intros []. subst; congruence.
+apply IHl with (y:=a); try easy.
+apply leb_trans with (y:=y). easy. apply gt_leb, H5.
 Qed.
 
+Corollary Increasing_tl x l :
+  Increasing (x :: l) -> ¬In x l.
+Proof.
+intros; apply Increasing_le with (y:=x).
+apply H. apply leb_refl.
+Qed.
+
+Corollary Increasing_lt x y l :
+  Increasing (y :: l) -> y > x -> ¬In x (y :: l).
+Proof.
+intros Hy Hx [F|F].
+subst; rewrite leb_refl in Hx; easy.
+apply Increasing_le with (y:=y) in F.
+easy. easy. apply gt_leb, Hx.
+Qed.
+
+Theorem Increasing_unique l1 l2 :
+  (∀x, In x l1 <-> In x l2) ->
+  Increasing l1 -> Increasing l2 ->
+  l1 = l2.
+Proof.
+revert l2; induction l1; destruct l2; intros. easy.
+1,2: exfalso; eapply in_nil, H, in_eq. assert(a = x). 
+- apply leb_asym; split.
+  + destruct (leb a x) eqn:F; [easy|exfalso].
+    eapply Increasing_lt; [apply H0|apply F|apply H, in_eq].
+  + destruct (leb x a) eqn:F; [easy|exfalso].
+    eapply Increasing_lt; [apply H1|apply F|apply H, in_eq].  
+- subst; apply wd, IHl1. apply Increasing_tl in H0, H1.
+  intros y; split; intros Y; eapply in_cons in Y as Z; apply H in Z; inv Z.
+  all: eapply RTC_weaken. apply H0. apply H1.
+Qed.
+
+End Uniqueness.
+
+(******************************************************************************)
+(* IV. The normalization function.                                            *)
+(******************************************************************************)
+Section Normalization.
+
+Definition normalize l := dedup (mergesort l).
+
+Theorem Increasing_normalize l :
+  Increasing (normalize l).
+Proof.
+apply Increasing_dedup, Sorted_mergesort.
+Qed.
+
+Theorem normalize_eqv l x :
+  In x (normalize l) <-> In x l.
+Proof.
+etransitivity. apply dedup_eqv, Sorted_mergesort.
+split; apply Permutation_in. apply Permutation_sym.
+all: apply Permutation_mergesort.
+Qed.
+
+Theorem normalize_fixed_point l :
+  Increasing l -> normalize l = l.
+Proof.
+intros; apply Increasing_unique. apply normalize_eqv.
+apply Increasing_normalize. apply H.
+Qed.
+
+End Normalization.
+
+(******************************************************************************)
+(* V. Exhausting all increasing sequences over a finite domain.               *)
+(******************************************************************************)
+Section Powerset.
+
+Notation Below x := (Forall (λ y, leb y x = false)).
+
+Fixpoint powerset (u : list X) :=
+  match u with
+  | [] => [[]]
+  | a :: v => let p := powerset v in p ++ map (cons a) p
+  end.
+
+Theorem Increasing_Below x l :
+  Increasing (x :: l) -> Below x l.
+Proof.
+intros; apply Forall_forall; intros.
+destruct (leb x0 x) eqn:Hx; [|easy].
+apply Increasing_le with (l:=l) in Hx; easy.
+Qed.
+
+Theorem Below_Increasing x l :
+  Increasing l -> Below x l -> Increasing (x :: l).
+Proof.
+destruct l; intros; constructor.
+easy. inv H0.
+Qed.
+
+Local Lemma X_dec (x y : X) :
+  {x = y} + {x ≠ y}.
+Proof.
+destruct (leb x y) eqn:Hx, (leb y x) eqn:Hy. left; apply leb_asym; easy.
+all: right; intros F; apply leb_asym in F; rewrite Hx, Hy in F; easy.
+Qed.
+
+Local Lemma Increasing_remove x l :
+  Increasing l -> Increasing (remove X_dec x l).
+Proof.
+induction l; simpl; intros. constructor.
+apply RTC_weaken in H as Hl; apply IHl in Hl.
+destruct (X_dec x a); [easy|].
+apply Below_Increasing; [easy|].
+apply Forall_incl with (l':=l); intros.
+apply in_remove in H0; easy. apply Increasing_Below, H.
+Qed.
+
+Theorem Increasing_In_powerset u l :
+  (∀x, In x l -> In x u) ->
+  Increasing u -> Increasing l ->
+  In l (powerset u).
+Proof.
+revert l; induction u as [|e u']; simpl; intros.
+destruct l; [now left|right]; eapply H, in_eq.
+assert(He := Increasing_remove e _ H1).
+assert(In (remove X_dec e l) (powerset u')). {
+  apply IHu'. intros x Hx; apply in_remove in Hx as [].
+  apply H in H2 as []; [congruence|easy].
+  eapply RTC_weaken, H0. easy. }
+apply in_app_iff; destruct (in_dec X_dec e l).
+2: left; rewrite notin_remove in H2; easy. right.
+apply in_map_iff; exists (remove X_dec e l); split; [|easy].
+apply Increasing_unique; try easy.
+- split. intros []. subst; easy. apply in_remove in H3; easy.
+  intros; destruct (X_dec x e). subst; apply in_eq.
+  apply in_cons, in_in_remove; easy.
+- apply Below_Increasing.
+  apply Increasing_remove, H1.
+  apply Forall_incl with (l':=u'); intros.
+  apply in_remove in H3 as [].
+  apply H in H3 as []; [congruence|easy].
+  apply Increasing_Below, H0.
+Qed.
+
+End Powerset.
+
 End Canonical_lists.
+
+Arguments Linear_order {_}.
+Arguments mergesort {_}.
+Arguments dedup {_}.
+Arguments normalize {_}.
+Arguments powerset {_}.

@@ -153,16 +153,16 @@ Qed.
 Section Lemmas.
 
 Lemma finite_unit :
-  Σ Q, length Q = 1 /\ ∀v : unit, In v Q.
+  ∃Q, length Q <= 1 /\ ∀v : unit, In v Q.
 Proof.
-exists [tt]. split. easy.
+exists [tt]; split. easy.
 intros []; apply in_eq.
 Defined.
 
 Lemma finite_bool :
-  Σ Q, length Q = 2 /\ ∀b : bool, In b Q.
+  ∃Q, length Q <= 2 /\ ∀b : bool, In b Q.
 Proof.
-exists [true; false]. split. easy.
+exists [true; false]; split. easy.
 intros []; simpl; auto.
 Defined.
 

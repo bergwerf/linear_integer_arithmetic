@@ -148,6 +148,13 @@ induction l; intros. easy. inv H.
   exists (a :: l1), l2; simpl; rewrite H; easy.
 Qed.
 
+Theorem Forall_incl {X} P (l l' : list X) :
+  (∀x, In x l -> In x l') -> Forall P l' -> Forall P l.
+Proof.
+intros; apply Forall_forall; intros.
+apply Forall_forall with (x:=x) in H0; auto.
+Qed.
+
 Notation lmax l := (fold_right max 0 l).
 
 Theorem lmax_in n l :
@@ -289,67 +296,6 @@ destruct (in_dec dec x l) as [H0|H0].
 1: exists (x :: l1), l2. 2: exists (a :: l1), l2. 3: exists [], l. all: easy.
 Qed.
 
-Section Powerset.
-
-Fixpoint powerset (u : list X) :=
-  match u with
-  | [] => [[]]
-  | a :: v => let p := powerset v in p ++ map (cons a) p
-  end.
-
-Fixpoint normalize (u l : list X) :=
-  match u with
-  | [] => []
-  | a :: v =>
-    let tl := normalize v (remove dec a l) in
-    if in_dec dec a l then a :: tl else tl
-  end.
-
-Theorem powerset_length u :
-  length (powerset u) = 2^length u.
-Proof.
-induction u; simpl. easy.
-now rewrite Nat.add_0_r, app_length, map_length, ?IHu.
-Qed.
-
-Theorem normalize_spec u l :
-  In (normalize u l) (powerset u).
-Proof.
-revert l; induction u; simpl; intros. now left.
-destruct (in_dec dec a l); apply in_app_iff; [right|left].
-apply in_map. all: apply IHu.
-Qed.
-
-Theorem normalize_sound u l x :
-  In x (normalize u l) -> In x l.
-Proof.
-revert l; induction u; simpl; intros. easy.
-destruct (in_dec dec a l); simpl. inv H; rename H0 into H.
-all: apply IHu, in_remove in H; easy.
-Qed.
-
-Theorem normalize_complete u l x :
-  In x u -> In x l -> In x (normalize u l).
-Proof.
-revert l; induction u; simpl; intros. easy.
-destruct (in_dec dec a l), (dec x a), H; simpl; subst; auto; try easy. right.
-all: apply IHu; [easy|]; apply in_in_remove; easy.
-Qed.
-
-Theorem normalize_normalize u l :
-  normalize u (normalize u l) = normalize u l.
-Proof.
-revert l; induction u; simpl; intros. easy.
-destruct (in_dec dec a l); simpl.
-destruct (dec a a); [|easy]. apply wd.
-2: destruct (in_dec _ _ _).
-2: apply normalize_sound, remove_In in i; easy.
-all: rewrite notin_remove; [apply IHu|].
-all: eapply contra; [apply normalize_sound|apply remove_In].
-Qed.
-
-End Powerset.
-
 Section Filtering.
 
 Variable P : X -> Prop.
@@ -460,8 +406,6 @@ End List_constructions_using_decidability.
 
 Arguments map2 {_ _ _}.
 Arguments strip {_}.
-Arguments powerset {_}.
-Arguments normalize {_}.
 Arguments pfilter {_}.
 Arguments intersect {_}.
 Arguments subtract {_}.

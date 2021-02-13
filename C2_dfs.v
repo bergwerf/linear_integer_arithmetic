@@ -305,20 +305,21 @@ Qed.
 
 End Completeness.
 
-Variable graph_size : nat.
-Hypothesis finite_graph : ∃l, length l = graph_size /\ ∀v : node, In v l.
+Variable upper_bound : nat.
+Hypothesis finite_graph : ∃l, length l <= upper_bound /\ ∀v : node, In v l.
 
 Theorem depth_first_search visited v :
   (Σ path, DFS_solution visited v path) +
   {∀path, ¬DFS_solution visited v path}.
 Proof.
-destruct (dfs graph_size visited v) as [visited'|path] eqn:H.
+destruct (dfs upper_bound visited v) as [visited'|path] eqn:H.
 - right; intros path Hpath.
   destruct finite_graph as [graph [graph_len graph_spec]].
-  assert(Hlen : length (diff graph visited) <= graph_size).
-  rewrite subtract_length, graph_len; apply Nat.le_sub_l.
-  eapply dfs_complete with (v:=v) in Hlen as [path' H'].
-  congruence. apply graph_spec. apply Hpath.
+  assert(Hlen : length (diff graph visited) <= upper_bound).
+  + rewrite subtract_length; etransitivity.
+    apply Nat.le_sub_l. apply graph_len.
+  + eapply dfs_complete with (v:=v) in Hlen as [path' H'].
+    congruence. apply graph_spec. apply Hpath.
 - left; exists path. eapply dfs_sound, H.
 Defined.
 

@@ -1,6 +1,6 @@
 (* Basic automata theory. *)
 
-Require Import Bool PeanoNat Eqdep_dec.
+Require Import Bool PeanoNat Permutation Eqdep_dec.
 From larith Require Import A_setup B1_utils B4_order C1_sort C2_dfs.
 
 Record automaton (letter : Set) := Automaton {
@@ -33,7 +33,7 @@ Definition Language word := Accepts word [start A].
 Definition Deterministic := ∀c s, length (trans A c s) = 1.
 
 (* There are finitely many states if they all fit on a list. *)
-Definition Finite n := Σ Q, length Q = n /\ ∀s : state A, In s Q.
+Definition Finite n := ∃Q, length Q <= n /\ ∀s : state A, In s Q.
 
 Theorem not_Accepts_nil w :
   ¬Accepts w [].
@@ -142,9 +142,9 @@ Theorem prod_size m n :
 Proof.
 intros [Q [Q_len Q_spec]] [R [R_len R_spec]].
 exists (list_prod Q R); split.
-- simpl; rewrite prod_length, Q_len, R_len; reflexivity.
+- simpl; rewrite prod_length; apply Nat.mul_le_mono; easy.
 - intros [sa sb]; apply in_prod; easy.
-Defined.
+Qed.
 
 End Product.
 
@@ -152,13 +152,29 @@ End Product.
 Section Powerset.
 
 Variable A : automaton letter.
-Variable Q : list (state A).
-Hypothesis Q_spec : ∀s, In s Q.
+Variable leb : state A -> state A -> bool.
+Hypothesis leb_linear_order : Linear_order leb.
 Hypothesis dec : ∀s t : state A, {s = t} + {s ≠ t}.
 
-Notation pow_state := (Σ ns, normalize dec Q ns = ns).
-Definition pow_norm s : pow_state :=
-  existT _ (normalize _ _ s) (normalize_normalize _ _ _ s).
+Notation normalize := (normalize leb).
+
+Local Theorem normalize_normalize_id l :
+  normalize (normalize l) = normalize l.
+Proof.
+apply normalize_fixed_point, Increasing_normalize.
+all: apply leb_linear_order.
+Qed.
+
+Local Theorem normalize_eqv l x :
+  In x (normalize l) <-> In x l.
+Proof.
+apply normalize_eqv.
+all: apply leb_linear_order.
+Qed.
+
+Notation pow_state := (Σ l, normalize l = l).
+Definition pow_norm l : pow_state :=
+  existT _ (normalize l) (normalize_normalize_id l).
 
 Definition pow_start := pow_norm [start A].
 Definition pow_accept (s : pow_state) := existsb (accept A) (projT1 s).
@@ -167,37 +183,37 @@ Definition pow_trans c (s : pow_state) :=
 
 Definition pow := Automaton _ _ pow_start pow_accept pow_trans.
 
-Theorem pow_Accepts word ss :
-  Accepts pow word (map pow_norm ss) <-> Exists (Accepts A word) ss.
+Theorem pow_Accepts word ls :
+  Accepts pow word (map pow_norm ls) <-> Exists (Accepts A word) ls.
 Proof.
-revert ss; induction word as [|c w]; simpl; intros.
+revert ls; induction word as [|c w]; simpl; intros.
 - (* Valid accept states. *)
   rewrite existsb_exists, Exists_exists; split.
   + (* pow accepts -> A accepts *)
-    intros [[s s_norm] []].
+    intros [[l l_norm] []].
     unfold pow_accept in H0; simpl in H0.
-    apply in_map_iff in H as [s' []]; inv H.
-    exists s'; split. easy.
-    apply existsb_exists in H0 as [s'' []].
-    rewrite existsb_exists; exists s''; split.
-    eapply normalize_sound, H. easy.
+    apply in_map_iff in H as [l' []]; inv H.
+    exists l'; split; [easy|].
+    apply existsb_exists in H0 as [s []].
+    rewrite existsb_exists; exists s; split; [|easy].
+    apply normalize_eqv, H.
   + (* A accepts -> pow accepts. *)
-    intros [s []]; exists (pow_norm s); split. apply in_map, H.
-    apply existsb_exists in H0 as [s' []].
-    apply existsb_exists; exists s'; split.
-    apply normalize_complete. all: easy.
+    intros [l []]; exists (pow_norm l); split. apply in_map, H.
+    apply existsb_exists in H0 as [s []].
+    apply existsb_exists; exists s; split; [|easy].
+    apply normalize_eqv, H0.
 - (* Valid transitions. *)
   unfold pow_trans.
   rewrite flat_map_singleton, map_map, <-map_map.
-  rewrite IHw, ?Exists_exists; split; intros [s []].
-  + apply in_map_iff in H as [s' []]; subst.
-    exists s'; split. easy. eapply Accepts_incl. 2: apply H0.
-    intros s; rewrite ?in_flat_map; intros [s'' []].
-    exists s''; split. eapply normalize_sound, H. easy.
+  rewrite IHw, ?Exists_exists; split; intros [l []].
+  + apply in_map_iff in H as [l' []]; subst.
+    exists l'; split; [easy|]. eapply Accepts_incl; [|apply H0].
+    intros s; rewrite ?in_flat_map; intros [s' []].
+    exists s'; split. apply normalize_eqv, H. easy.
   + eexists; split. apply in_map_iff; eexists; split.
-    reflexivity. apply H. eapply Accepts_incl. 2: apply H0.
-    intros s'; rewrite ?in_flat_map; intros [s'' []].
-    exists s''; split. apply normalize_complete. all: easy.
+    reflexivity. apply H. eapply Accepts_incl; [|apply H0].
+    intros s; rewrite ?in_flat_map; intros [s' []].
+    exists s'; split. apply normalize_eqv. all: easy.
 Qed.
 
 Theorem pow_spec word :
@@ -214,25 +230,15 @@ Proof.
 easy.
 Qed.
 
-(* I do not know what magic makes this work, but I am happy it does! *)
-Lemma pow_state_eq (s s' : pow_state) :
-  projT1 s = projT1 s' -> s = s'.
+Lemma pow_state_eq (l1 l2 : pow_state) :
+  projT1 l1 = projT1 l2 -> l1 = l2.
 Proof.
-destruct s, s'; simpl; intros; subst. replace e with e0. easy.
+destruct l1, l2; simpl; intros; subst.
+replace e with e0. reflexivity.
 apply eq_proofs_unicity_on.
 intros; edestruct list_eq_dec. apply dec.
-left; apply e1. now right.
+left; apply e1. right; apply n.
 Qed.
-
-Theorem pow_size :
-  Finite pow (2^length Q).
-Proof.
-exists (map pow_norm (powerset Q)); split.
-- rewrite map_length; apply powerset_length.
-- intros [s H]; apply in_map_iff; exists s; split.
-  + apply pow_state_eq; apply H.
-  + rewrite <-H; apply normalize_spec.
-Defined.
 
 Theorem pow_dec (s t : pow_state) :
   {s = t} + {s ≠ t}.
@@ -241,6 +247,37 @@ edestruct list_eq_dec. apply dec.
 - left; apply pow_state_eq, e.
 - right; intros H; subst; easy.
 Defined.
+
+(*
+This proof shows how painful it is when hypotheses are not automatically
+resolved. I do not know how to satisfy the hypotheses only once without using
+Modules. Using Modules is not possible because they require explicit types.
+*)
+Theorem pow_size n :
+  Finite A n -> Finite pow (2^n).
+Proof.
+destruct leb_linear_order as [leb1 [leb2 leb3]].
+intros [Q [Q_len Q_spec]]; pose(Q' := normalize Q).
+exists (map pow_norm (powerset Q')); split.
+- (* Show that the number of states is bounded by 2^n. *)
+  rewrite map_length; etransitivity.
+  2: apply Nat.pow_le_mono_r with (b:=length Q'); [easy|].
+  + induction Q'; simpl. easy.
+    rewrite app_length, map_length, Nat.add_0_r.
+    apply Nat.add_le_mono; apply IHQ'.
+  + etransitivity. apply length_dedup.
+    rewrite Permutation_length with (l':=Q).
+    easy. apply Permutation_sym, Permutation_mergesort.
+- (* Show that all states are listed. *)
+  intros [l H]; apply in_map_iff; exists l; split.
+  + apply pow_state_eq; apply H.
+  + rewrite <-H; apply Increasing_In_powerset with (leb:=leb); try easy.
+    2-3: apply Increasing_normalize; try easy.
+    intros x _. apply dedup_eqv; try easy.
+    apply Sorted_mergesort; easy.
+    apply Permutation_in with (l:=Q).
+    apply Permutation_mergesort. apply Q_spec.
+Qed.
 
 End Powerset.
 
@@ -301,9 +338,9 @@ Theorem opt_size n :
   Finite A n -> Finite opt (S n).
 Proof.
 intros [Q [Q_len Q_spec]]; exists (None :: map Some Q); split.
-- simpl; rewrite map_length, Q_len; reflexivity.
+- simpl; rewrite map_length; apply le_n_S, Q_len.
 - intros [s|]. apply in_cons, in_map, Q_spec. apply in_eq.
-Defined.
+Qed.
 
 End Option.
 
@@ -441,8 +478,9 @@ Theorem sat_solve_complete n s :
 Proof.
 intros; apply Accepts_sat_Solution in H as [path H].
 destruct finite as [Q [Q_len Q_spec]].
-apply dfs_complete with (graph:=Q)(path:=path). apply Q_spec.
-rewrite subtract_length, Q_len; apply Nat.le_sub_l. apply H.
+apply dfs_complete with (graph:=Q)(path:=path); try easy.
+rewrite subtract_length; etransitivity.
+apply Nat.le_sub_l. apply Q_len.
 Qed.
 
 Theorem sat_Accepts word s :
@@ -530,9 +568,7 @@ Hypothesis finite : Finite A size.
 Theorem Accepts_inhabited_dec s :
   (Σ w, Accepts A w [s]) + {∀w, ¬Accepts A w [s]}.
 Proof.
-assert(fin : ∃Q, length Q = size /\ ∀t : state A, In t Q).
-destruct finite as [Q HQ]; exists Q; apply HQ.
-destruct (depth_first_search _ trans_adj (accept A) dec size fin [] s).
+destruct (depth_first_search _ trans_adj (accept A) dec size finite [] s).
 - left; destruct s0 as [path H].
   exists (strip (find_word s path)).
   apply find_word_spec, H.
