@@ -338,15 +338,16 @@ Defined.
 
 Section Evaluation.
 
-Notation "φ ∨` ϕ" := (¬`(¬`φ ∧` ¬`ϕ)) (at level 35).
-Notation "φ ⟹ ϕ" := (¬`(φ ∧` ¬`ϕ)) (at level 40).
-Notation "∀[ φ ]" := (¬`∃[¬`φ]) (format "∀[ φ ]").
-Notation "i =` j" := (wff_atom (rel_eq i j)) (at level 25).
-Notation "i ≤` j" := (wff_atom (rel_le i j)) (at level 25).
-Notation "i ≠` j" := (¬`(i =` j)) (at level 25).
-Notation "i <` j" := (i ≤` j ∧` i ≠` j) (at level 25).
-Notation Zero i   := (wff_atom (rel_zero i)).
-Notation One i    := (wff_atom (rel_one i)).
+Notation "φ ∨` ϕ"  := (¬`(¬`φ ∧` ¬`ϕ)) (at level 35).
+Notation "φ ==> ϕ" := (¬`(φ ∧` ¬`ϕ)) (at level 40).
+Notation "∀[ φ ]"  := (¬`∃[¬`φ]) (format "∀[ φ ]").
+Notation "i =` j"  := (wff_atom (rel_eq i j)) (at level 25).
+Notation "i ≤` j"  := (wff_atom (rel_le i j)) (at level 25).
+Notation "i ≠` j"  := (¬`(i =` j)) (at level 25).
+Notation "i <` j"  := (i ≤` j ∧` i ≠` j) (at level 25).
+Notation Zero i    := (wff_atom (rel_zero i)).
+Notation One i     := (wff_atom (rel_one i)).
+Notation Add i j k := (wff_atom (rel_add i j k)).
 
 Definition solve φ :=
   match BinR_dec φ with
@@ -357,29 +358,28 @@ Definition solve φ :=
 (*
 Evaluation
 ----------
-It is possible to evaluate the decision procedure, but it is extremely slow! The
-decision itself takes place in Set and can be evaluated, but I do not know how
-to retrieve the actual witness in Prop.
-
-Here are some examples of trivial valid formulae in the relational language that
-can be solved within a few seconds.
+It is possible to evaluate the decision procedure, but it is extremely slow!Here
+are some examples of trivial valid formulae in the relational language that can
+be solved within a few seconds.
 ```
 Compute solve ∃[One 0].
-Compute solve ∀[0 ≤` 0].
-Compute solve ∃[0 ≠` 0].
 Compute solve ∀[Zero 0].
+Compute solve ∃[0 ≠` 0].
+Compute solve ∀[0 ≤` 0].
 Compute solve (0 <` 1).
 Compute solve (0 <` 1 ∧` 1 ≤` 2).
 Compute solve (0 ≤` 1 ∧` 1 ≤` 2).
 Compute solve (0 ≤` 1 ∧` 1 ≤` 0 ∧` 0 ≠` 1).
+Compute solve (One 0 ∧` One 1 ∧` Add 0 1 2 ∧` 2 =` 3 ∧` Add 2 3 4).
 ```
 
-Slightly non-trivial examples (in particular quantifiers over more complex
-formulas) become unfeasible. The first one finished in under one minute, and I
-stopped the second one after five minutes (I have no idea how long it will run).
+But, slightly non-trivial examples (in particular quantifiers over more complex
+formulas) become infeasible. Only the first example completes in under a second
+(it previosly took around 20 seconds with a naive list normalization function).
 ```
 Compute solve ∀[0 <` 1 ∨` 1 <` 0].
-Compute solve ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ⟹ 0 =` 1]].
+Compute solve ∀[0 <` 1 ∨` 0 =` 1 ∨` 1 <` 0].
+Compute solve ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ==> 0 =` 1]].
 ```
 
 The terrible performance is of course entirely to blame on this implementation.
@@ -387,15 +387,9 @@ There exist efficient implementations of this decision procedure which could
 easily evaluate the above examples.
 
 Ideas for improving the performance:
-+ Determinization could be applied only when needed (negation).
 + Double negation (between universal quantifiers) could be removed.
-+ The powerset construction could use a state ordering to normalize (sort)
-  states. This avoids the need to materialize the state space.
-+ The depth-first search could use a tree to store visited states. I think that
-  is the point where trees would yield the most advantage.
-+ The automaton construction could be separated from the specification. However
-  I find the mixing of value and specification using dependent types to be
-  quite elegant, and I doubt this change would have a significant impact.
++ The depth-first search could use an AVL tree to store visited states.
++ The automaton construction could be separated from the specification.
 *)
 
 End Evaluation.

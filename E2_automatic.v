@@ -198,7 +198,7 @@ induction φ; simpl.
   apply automatic_atoms.
 - (* Negation: flip accept states. *)
   destruct IHφ as [n [use reg]]; exists n; split.
-  apply Use_not, use. admit.
+  apply Use_not, use. apply regular_negation, reg.
 - (* Conjunction: project on a common alphabet and use the product. *)
   destruct IHφ1 as [n1 [use1 reg1]], IHφ2 as [n2 [use2 reg2]].
   exists (max n1 n2); split; simpl.
@@ -221,7 +221,7 @@ induction φ; simpl.
     exists n; split.
     apply Use_ex, use.
     apply regular_ex, reg.
-Admitted.
+Defined.
 
 Theorem Automatic_Realizes_dec φ :
   Automatic φ -> (Σ Γ, Model |= (φ)[Γ]) + {∀Γ, Model |= (¬`φ)[Γ]}.

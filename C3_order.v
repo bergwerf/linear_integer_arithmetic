@@ -12,11 +12,16 @@ Arguments cmp_eq {_ _}.
 Arguments cmp_opp {_ _}.
 Arguments cmp_lt_trans {_ _}.
 
+Theorem cmp_refl {X cmp} (ord : Order cmp) (x : X) :
+  cmp x x = Eq.
+Proof.
+apply (cmp_eq ord); reflexivity.
+Qed.
+
 Theorem cmp_swap {X cmp} (ord : Order cmp) c (x y : X) :
   cmp x y = c <-> cmp y x = CompOpp c.
 Proof.
-rewrite (cmp_opp ord).
-apply CompOpp_iff.
+rewrite (cmp_opp ord); apply CompOpp_iff.
 Qed.
 
 Theorem cmp_trans {X cmp} (ord : Order cmp) c (x y z : X) :
@@ -32,10 +37,10 @@ Qed.
 Theorem cmp_dec {X} (cmp : X -> X -> comparison) :
   Order cmp -> ∀x y : X, {x = y} + {x ≠ y}.
 Proof.
-intros [cmp_eq _ _] x y.
-destruct (cmp x y) eqn:H. left; apply cmp_eq, H.
-all: right; intros F; apply cmp_eq in F; congruence.
-Qed.
+intros ord x y.
+destruct (cmp x y) eqn:H. left; apply (cmp_eq ord), H.
+all: right; intros F; apply (cmp_eq ord) in F; congruence.
+Defined.
 
 (******************************************************************************)
 (* I. Ordering unit and bool.                                                 *)
@@ -54,12 +59,18 @@ Definition cmp_bool (x y : bool) :=
 Theorem Order_unit :
   Order cmp_unit.
 Proof.
-Admitted.
+unfold cmp_unit; split; try easy.
+intros [] []; easy.
+Qed.
 
 Theorem Order_bool :
   Order cmp_bool.
 Proof.
-Admitted.
+unfold cmp_bool; split.
+- intros [] []; easy.
+- intros [] []; easy.
+- intros [] [] []; easy.
+Qed.
 
 End Order_unit_and_bool.
 
@@ -83,7 +94,15 @@ Definition cmp_option x1 x2 :=
 Theorem Order_option :
   Order cmp_option.
 Proof.
-Admitted.
+split.
+- intros [] []; simpl. 2-4: easy.
+  etransitivity; [apply (cmp_eq ord)|].
+  split; intros. now subst. inv H.
+- intros [] []; simpl. 2-4: easy.
+  apply (cmp_opp ord).
+- intros [] [] []; simpl; try easy.
+  apply (cmp_trans ord).
+Qed.
 
 End Order_option.
 
@@ -169,7 +188,24 @@ Fixpoint cmp_list l1 l2 :=
 Theorem Order_list :
   Order cmp_list.
 Proof.
-Admitted.
+split; intros.
+- revert y; induction x; destruct y; simpl; try easy.
+  destruct (cmp a x0) eqn:Ha.
+  apply (cmp_eq ord) in Ha; subst x0.
+  etransitivity; [apply IHx|].
+  split; intros; [now subst|inv H].
+  all: split; [easy|intros]; inv H.
+  all: rewrite (cmp_refl ord) in Ha; discriminate Ha.
+- revert y; induction x; destruct y; simpl; try easy.
+  rewrite (cmp_opp ord); destruct (cmp x0 a); simpl; easy.
+- revert H H0; revert y z; induction x; destruct y, z; simpl; try easy.
+  destruct (cmp a x0) eqn:H0, (cmp x0 x1) eqn:H1; try easy.
+  all: try apply (cmp_eq ord) in H0; subst.
+  all: try apply (cmp_eq ord) in H1; subst.
+  rewrite (cmp_refl ord); apply IHx.
+  rewrite H1; easy. rewrite H0; easy.
+  rewrite (cmp_lt_trans ord) with (y:=x0); easy.
+Qed.
 
 End Order_list.
 

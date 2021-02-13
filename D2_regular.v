@@ -110,6 +110,6 @@ intros [A size fin spec [det|] cmp ord].
   + apply Some, Automata.pow_det.
   + eapply Order_sig. apply Order_list, ord.
     apply Automata.pow_state_pir, dec.
-Qed.
+Defined.
 
 End Closure_under_logical_operations.
