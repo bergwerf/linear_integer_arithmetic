@@ -1,7 +1,7 @@
 (* Basic automata theory. *)
 
 Require Import Bool PeanoNat Permutation Eqdep_dec.
-From larith Require Import A_setup B1_utils B4_order C1_sort C2_dfs.
+From larith Require Import A_setup B1_utils C1_sort C2_dfs C3_order.
 
 Record automaton (letter : Set) := Automaton {
   state  : Set;
@@ -230,7 +230,7 @@ Proof.
 easy.
 Qed.
 
-Lemma pow_state_eq (l1 l2 : pow_state) :
+Theorem pow_state_pir (l1 l2 : pow_state) :
   projT1 l1 = projT1 l2 -> l1 = l2.
 Proof.
 destruct l1, l2; simpl; intros; subst.
@@ -244,7 +244,7 @@ Theorem pow_dec (s t : pow_state) :
   {s = t} + {s ≠ t}.
 Proof.
 edestruct list_eq_dec. apply dec.
-- left; apply pow_state_eq, e.
+- left; apply pow_state_pir, e.
 - right; intros H; subst; easy.
 Defined.
 
@@ -270,7 +270,7 @@ exists (map pow_norm (powerset Q')); split.
     easy. apply Permutation_sym, Permutation_mergesort.
 - (* Show that all states are listed. *)
   intros [l H]; apply in_map_iff; exists l; split.
-  + apply pow_state_eq; apply H.
+  + apply pow_state_pir; apply H.
   + rewrite <-H; apply Increasing_In_powerset with (leb:=leb); try easy.
     2-3: apply Increasing_normalize; try easy.
     intros x _. apply dedup_eqv; try easy.

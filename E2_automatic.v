@@ -2,7 +2,7 @@
 
 Require Vector.
 Require Import PeanoNat BinNat Lia.
-From larith Require Import A_setup B1_utils B2_vector B4_order.
+From larith Require Import A_setup B1_utils B2_vector C3_order.
 From larith Require Import D1_automaton D2_regular E1_formula.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
@@ -142,7 +142,7 @@ Theorem regular_ex φ :
   regular (λ w : list (vec n), Model |= (∃[φ])[vctx w]).
 Proof.
 intros [A size fin spec det cmp ord].
-assert(dec := ord_dec cmp ord); eapply Regular with
+assert(dec := cmp_dec cmp ord); eapply Regular with
 (r_fsa:=Automata.sat _ (Automata.proj _ A _ proj) zero size dec).
 - apply fin.
 - intros; simpl.

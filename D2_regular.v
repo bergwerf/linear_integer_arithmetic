@@ -1,9 +1,6 @@
 (* A carrier type for regular predicates. *)
 
-From larith Require Import A_setup B1_utils B4_order D1_automaton.
-
-(* Definition of a regular predicate. *)
-Module Regularity.
+From larith Require Import A_setup B1_utils C1_sort C3_order D1_automaton.
 
 Section A_regular_predicate.
 
@@ -33,7 +30,7 @@ Theorem regular_dec :
 Proof.
 destruct is_regular as [A size fin spec _ cmp ord].
 edestruct Language_inhabited_dec with (A:=A).
-apply full_alphabet. eapply ord_dec, ord. apply fin.
+apply full_alphabet. eapply cmp_dec, ord. apply fin.
 - left; destruct s as [w H]; exists w; apply spec, H.
 - right; intros; rewrite <-spec; apply n.
 Defined.
@@ -101,9 +98,18 @@ intros [A size fin spec [det|] cmp ord].
   + apply Some, det.
   + apply ord.
 - (* A is not deterministic; use the powerset construction. *)
-Admitted.
+  pose(leb := cmp_leb _ cmp);
+  assert(Hleb := Linear_order_cmp_leb _ cmp ord);
+  assert(dec := cmp_dec cmp ord).
+  eapply Regular with (r_fsa:=Automata.compl _ (Automata.pow _ A leb Hleb)).
+  + apply Automata.pow_size. apply dec. apply fin.
+  + intros; etransitivity.
+    apply Automata.compl_spec, Automata.pow_det.
+    rewrite Automata.pow_spec.
+    split; apply contra, spec.
+  + apply Some, Automata.pow_det.
+  + eapply Order_sig. apply Order_list, ord.
+    apply Automata.pow_state_pir, dec.
+Qed.
 
 End Closure_under_logical_operations.
-
-End Regularity.
-Export Regularity.
