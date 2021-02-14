@@ -1,6 +1,7 @@
 (* An implementation of the left-leaning red-black trees without deletion. *)
 (* See: https://mew.org/~kazu/proj/red-black-tree/ *)
 
+Require Import Lia.
 From larith Require Import A_setup B1_utils C1_order.
 
 Section Red_black_tree.
@@ -91,9 +92,12 @@ Definition LLRB n t :=
   Rd_child True t /\ Bk_height n t /\ Left_leaning t.
 
 Theorem rb_max_height n t :
-  LLRB n t -> rb_height t < 2 * n.
+  LLRB n t -> rb_height t <= 2 * n.
 Proof.
-Admitted.
+intros [_ [H _]]; revert H; revert n.
+induction t; simpl; intros; inv H; auto.
+all: apply IHt1 in H3; apply IHt2 in H6; lia.
+Qed.
 
 Theorem rb_insert_LLRB n x t :
   LLRB n t -> LLRB n (rb_insert x t) \/ LLRB (S n) (rb_insert x t).
