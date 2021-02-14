@@ -123,8 +123,7 @@ intros []. inv H0; simpl in H. easy.
 Qed.
 
 Lemma LLRB_Bk_inv c n l x r :
-  LLRB Black (S n) (Fork c l x r) ->
-  LLRB (rb_col l) n l /\ LLRB Black n r.
+  LLRB Black (S n) (Fork c l x r) -> LLRB (rb_col l) n l /\ LLRB Black n r.
 Proof.
 intros []. inv H0; simpl in H. easy.
 Qed.
