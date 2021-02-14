@@ -6,9 +6,10 @@ B1_utils.v
 B2_vector.v
 B3_binary.v
 
-C1_sort.v
-C2_dfs.v
-C3_order.v
+C1_order.v
+C2_rbtree.v
+C3_norm.v
+C4_dfs.v
 
 D1_automaton.v
 D2_regular.v

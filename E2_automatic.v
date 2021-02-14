@@ -2,7 +2,7 @@
 
 Require Vector.
 Require Import PeanoNat BinNat Lia.
-From larith Require Import A_setup B1_utils B2_vector C3_order.
+From larith Require Import A_setup B1_utils B2_vector C1_order.
 From larith Require Import D1_automaton D2_regular E1_formula.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
