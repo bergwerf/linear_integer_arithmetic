@@ -9,11 +9,11 @@ From larith Require Import D1_automaton D2_regular E1_formula E2_automatic.
 Definition BinR (a : rel_atom) (Γ : list N) :=
   (let f := λ i, nth i Γ 0 in
   match a with
-  | rel_zero i    => f i = 0
-  | rel_one i     => f i = 1
-  | rel_add i j k => f i + f j = f k
-  | rel_eq i j    => f i = f j
-  | rel_le i j    => f i <= f j
+  | Rel_zero i    => f i = 0
+  | Rel_one i     => f i = 1
+  | Rel_add i j k => f i + f j = f k
+  | Rel_eq i j    => f i = f j
+  | Rel_le i j    => f i <= f j
   end)%N.
 
 Lemma nth_app_default {X} i l (d : X) :
@@ -204,9 +204,9 @@ unfold Language; rewrite dfa_add_Accepts.
 simpl; now rewrite N.add_0_r.
 Qed.
 
-Lemma regular_rel_zero i :
+Lemma regular_Rel_zero i :
   regular (λ w : list (vec (S i)),
-    BinR (rel_zero i) (ctx w)).
+    BinR (Rel_zero i) (ctx w)).
 Proof.
 eapply regular_ext. eapply regular_proj. esplit.
 - apply Automata.opt_size with (A:=dfa_zero), finite_unit.
@@ -218,9 +218,9 @@ eapply regular_ext. eapply regular_proj. esplit.
   rewrite vctx_nth; reflexivity. easy.
 Defined.
 
-Lemma regular_rel_one i :
+Lemma regular_Rel_one i :
   regular (λ w : list (vec (S i)),
-    BinR (rel_one i) (ctx w)).
+    BinR (Rel_one i) (ctx w)).
 Proof.
 eapply regular_ext. eapply regular_proj. esplit.
 - apply Automata.opt_size with (A:=dfa_one), finite_bool.
@@ -232,9 +232,9 @@ eapply regular_ext. eapply regular_proj. esplit.
   rewrite vctx_nth; reflexivity. easy.
 Defined.
 
-Lemma regular_rel_eq i j :
+Lemma regular_Rel_eq i j :
   regular (λ w : list (vec (1 + max i j)),
-    BinR (rel_eq i j) (ctx w)).
+    BinR (Rel_eq i j) (ctx w)).
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
@@ -249,9 +249,9 @@ eapply regular_ext. eapply regular_proj with (pr:=f). esplit.
   rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
 Defined.
 
-Lemma regular_rel_le i j :
+Lemma regular_Rel_le i j :
   regular (λ w : list (vec (1 + max i j)),
-    BinR (rel_le i j) (ctx w)).
+    BinR (Rel_le i j) (ctx w)).
 Proof.
 remember (max i j) as n.
 pose(f (c : vec (S n)) := (vnth c (fin n i), vnth c (fin n j))).
@@ -266,9 +266,9 @@ eapply Regular with (r_fsa:=dfa_le).
   rewrite ?vctx_nth, ?map_map; reflexivity. all: lia.
 Defined.
 
-Lemma regular_rel_add i j k :
+Lemma regular_Rel_add i j k :
   regular (λ w : list (vec (1 + max (max i j) k)),
-    BinR (rel_add i j k) (ctx w)).
+    BinR (Rel_add i j k) (ctx w)).
 Proof.
 remember (max (max i j) k) as n.
 pose(f (c : vec (S n)) :=
@@ -292,7 +292,7 @@ intros H; apply IHl, Lt.lt_S_n, H.
 Qed.
 
 Theorem Automatic_rel_atom (a : rel_atom) :
-  Automatic BinR bnum (wff_atom a).
+  Automatic BinR bnum (WFF_atom a).
 Proof.
 destruct a;
 [ exists (1 + i)
@@ -301,11 +301,11 @@ destruct a;
 | exists (1 + max i j)
 | exists (1 + max i j)].
 all: split.
-2: apply regular_rel_zero.
-3: apply regular_rel_one.
-4: apply regular_rel_add.
-5: apply regular_rel_eq.
-6: apply regular_rel_le.
+2: apply regular_Rel_zero.
+3: apply regular_Rel_one.
+4: apply regular_Rel_add.
+5: apply regular_Rel_eq.
+6: apply regular_Rel_le.
 all: rewrite Nat.add_comm; intros Γ; simpl.
 all: rewrite ?nth_firstn; try easy.
 all: lia.
@@ -341,13 +341,13 @@ Section Evaluation.
 Notation "φ ∨` ϕ"  := (¬`(¬`φ ∧` ¬`ϕ)) (at level 35).
 Notation "φ ==> ϕ" := (¬`(φ ∧` ¬`ϕ)) (at level 40).
 Notation "∀[ φ ]"  := (¬`∃[¬`φ]) (format "∀[ φ ]").
-Notation "i =` j"  := (wff_atom (rel_eq i j)) (at level 25).
-Notation "i ≤` j"  := (wff_atom (rel_le i j)) (at level 25).
+Notation "i =` j"  := (WFF_atom (Rel_eq i j)) (at level 25).
+Notation "i ≤` j"  := (WFF_atom (Rel_le i j)) (at level 25).
 Notation "i ≠` j"  := (¬`(i =` j)) (at level 25).
 Notation "i <` j"  := (i ≤` j ∧` i ≠` j) (at level 25).
-Notation Zero i    := (wff_atom (rel_zero i)).
-Notation One i     := (wff_atom (rel_one i)).
-Notation Add i j k := (wff_atom (rel_add i j k)).
+Notation Zero i    := (WFF_atom (Rel_zero i)).
+Notation One i     := (WFF_atom (Rel_one i)).
+Notation Add i j k := (WFF_atom (Rel_add i j k)).
 
 Definition solve φ :=
   match BinR_dec φ with

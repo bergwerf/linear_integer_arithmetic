@@ -190,7 +190,7 @@ Defined.
 End Regularity_of_existential_quantification.
 
 Theorem automatic_structure φ :
-  (∀a, Automatic (wff_atom a)) -> Automatic φ.
+  (∀a, Automatic (WFF_atom a)) -> Automatic φ.
 Proof.
 intros automatic_atoms.
 induction φ; simpl.
@@ -244,7 +244,7 @@ apply regular_dec with (alphabet:=enumerate_vectors n) in reg.
 Defined.
 
 Corollary automatic_structure_dec φ :
-  (∀a, Automatic (wff_atom a)) ->
+  (∀a, Automatic (WFF_atom a)) ->
   (Σ Γ, Model |= (φ)[Γ]) + {∀Γ, Model |= (¬`φ)[Γ]}.
 Proof.
 intros H; apply Automatic_Realizes_dec, automatic_structure, H.
