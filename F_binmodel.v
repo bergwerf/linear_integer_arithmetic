@@ -371,25 +371,50 @@ Compute solve (0 <` 1 ∧` 1 ≤` 2).
 Compute solve (0 ≤` 1 ∧` 1 ≤` 2).
 Compute solve (0 ≤` 1 ∧` 1 ≤` 0 ∧` 0 ≠` 1).
 Compute solve (One 0 ∧` One 1 ∧` Add 0 1 2 ∧` 2 =` 3 ∧` Add 2 3 4).
+Compute solve ∃[∃[0 <` 1 ∧` 1 <` 2]].
 ```
 
-But, slightly non-trivial examples (in particular quantifiers over more complex
-formulas) become infeasible. Only the first example completes in under a second
-(it previosly took around 20 seconds with a naive list normalization function).
+But slightly non-trivial examples, in particular with universal quantifiers over
+more complex formulas, become completely infeasible. Below are some examples.
 ```
-Compute solve ∀[0 <` 1 ∨` 1 <` 0].
-Compute solve ∀[0 <` 1 ∨` 0 =` 1 ∨` 1 <` 0].
+Compute solve ∀[∀[0 <` 1 ∨` 0 =` 1 ∨` 1 <` 0]].
 Compute solve ∀[∀[0 ≤` 1 ∧` 1 ≤` 0 ==> 0 =` 1]].
 ```
 
 The terrible performance is of course entirely to blame on this implementation.
-There exist efficient implementations of this decision procedure which could
-easily evaluate the above examples.
+Perhaps the most painful is Automata.sat, which needs to evaluate a depth-first
+search inside the provided automaton just to determine one accept state. A
+faster implementation would pre-compute all accept states using reverse
+transitions (for example back-pointers).
 
-Ideas for improving the performance:
+There exist efficient implementations of this decision procedure which could
+easily evaluate the above examples. Perhaps I will write one in C and add it to
+this repository one day.
+
+I have given up on actually making this implementation perform well, but I do
+have some ideas left for making the implementation theoretically faster.
 + Double negation (between universal quantifiers) could be removed.
-+ The depth-first search could use an AVL tree to store visited states.
++ The depth-first search could use a binary search tree to store visited states.
 + The automaton construction could be separated from the specification.
 *)
+
+Example solve_two_inequalities :
+  solve (0 <` 1 ∧` 1 ≤` 2) = Some [0%N; 1%N; 2%N].
+Proof.
+vm_compute; reflexivity.
+Qed.
+
+Example solve_one_plus_one_times_two :
+  solve (One 0 ∧` One 1 ∧` Add 0 1 2 ∧` 2 =` 3 ∧` Add 2 3 4) =
+  Some [1%N; 1%N; 2%N; 2%N; 4%N].
+Proof.
+vm_compute; reflexivity.
+Qed.
+
+Example solve_at_least_two_smaller_numbers :
+  solve ∃[∃[0 <` 1 ∧` 1 <` 2]] = Some [24%N].
+Proof.
+vm_compute; reflexivity.
+Qed.
 
 End Evaluation.

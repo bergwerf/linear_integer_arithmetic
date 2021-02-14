@@ -424,6 +424,10 @@ Qed.
 End Projection.
 
 (* Remove a suffix of padding-symbols using 'early accept' states. *)
+(*
+I could not find any standard name for this construction, so I call it
+saturation because the language is `saturated' by words with a padding suffix.
+*)
 Section Saturation.
 
 Variable A : automaton letter.
