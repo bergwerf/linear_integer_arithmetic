@@ -110,32 +110,23 @@ Inductive Bk_balanced : nat -> rb_tree -> Prop :=
 Definition LLRB p n t := LLRB_col p t /\ Bk_balanced n t.
 Definition Quasi_LLRB n t := Quasi_LLRB_col t /\ Bk_balanced n t.
 
-Lemma LLRB_Rd_inv c n l x r :
-  LLRB Red n (Fork c l x r) -> LLRB Black n l /\ LLRB Black n r.
-Proof.
-intros []. inv H0; simpl in H. easy.
-Qed.
-
 Lemma LLRB_0_Bk_inv c l x r :
   ¬LLRB Black 0 (Fork c l x r).
 Proof.
 intros []; inv H0.
 Qed.
 
-Lemma LLRB_rb_col_Black t :
-  LLRB_col Black t -> rb_col t = Black.
+Lemma LLRB_Rd_inv c n l x r :
+  LLRB Red n (Fork c l x r) -> LLRB Black n l /\ LLRB Black n r.
 Proof.
-destruct t. easy.
-destruct c; easy.
+intros []. inv H0; simpl in H. easy.
 Qed.
 
 Lemma LLRB_Bk_inv c n l x r :
   LLRB Black (S n) (Fork c l x r) ->
-  LLRB (rb_col l) n l /\ LLRB (rb_col r) n r.
+  LLRB (rb_col l) n l /\ LLRB Black n r.
 Proof.
-intros []. inv H0. simpl in H.
-repeat split; try easy.
-rewrite LLRB_rb_col_Black; easy.
+intros []. inv H0; simpl in H. easy.
 Qed.
 
 Theorem rb_height_bound_any_root c n t :
@@ -153,7 +144,7 @@ revert n c; induction t; simpl; intros.
   + destruct n. apply LLRB_0_Bk_inv in H; easy.
     apply LLRB_Bk_inv in H as [].
     apply IHt1 in H; apply IHt2 in H0.
-    destruct (rb_col t1), (rb_col t2); lia.
+    destruct (rb_col t1); lia.
 Qed.
 
 Corollary rb_height_bound n t :
