@@ -399,7 +399,8 @@ have some ideas left for making the implementation theoretically faster.
 *)
 
 Example solve_two_inequalities :
-  solve (0 <` 1 ∧` 1 ≤` 2) = Some [0%N; 1%N; 2%N].
+  solve (0 <` 1 ∧` 1 ≤` 2) =
+  Some [0%N; 1%N; 2%N].
 Proof.
 vm_compute; reflexivity.
 Qed.
@@ -412,7 +413,8 @@ vm_compute; reflexivity.
 Qed.
 
 Example solve_at_least_two_smaller_numbers :
-  solve ∃[∃[0 <` 1 ∧` 1 <` 2]] = Some [24%N].
+  solve ∃[∃[0 <` 1 ∧` 1 <` 2]] =
+  Some [24%N].
 Proof.
 vm_compute; reflexivity.
 Qed.

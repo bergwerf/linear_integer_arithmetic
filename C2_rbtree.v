@@ -194,7 +194,7 @@ Fixpoint BST lwb upb t :=
   end.
 
 Theorem rb_insert_BST upb lwb x t :
-  BST lwb upb t -> BST lwb upb (rb_insert x t).
+  In_interval upb lwb x -> BST lwb upb t -> BST lwb upb (rb_insert x t).
 Proof.
 Admitted.
 
