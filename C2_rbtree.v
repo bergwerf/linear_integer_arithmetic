@@ -18,6 +18,12 @@ Inductive rb_tree :=
 Notation Rd := (Fork Red).
 Notation Bk := (Fork Black).
 
+Definition rb_col t :=
+  match t with
+  | Leaf => Black
+  | Fork c _ _ _ => c
+  end.
+
 Definition rb_balance_l c l z r :=
   match c, l with
   (* Rotation for double red fork. *)
@@ -70,7 +76,7 @@ Fixpoint rb_contains x t :=
 Fixpoint rb_height t :=
   match t with
   | Leaf => 0
-  | Fork _ l _ r => max (rb_height l) (rb_height r)
+  | Fork _ l _ r => S (max (rb_height l) (rb_height r))
   end.
 
 (* Prove that the algorithm obeys the invariants that keep the tree balanced. *)
@@ -80,7 +86,7 @@ Section Tree_invariants.
 Fixpoint LLRB_col c t :=
   match c, t with
   | _, Leaf => True
-  | Black, Bk l _ r =>  (LLRB_col Red l \/ LLRB_col Black l) /\ LLRB_col Black r
+  | Black, Bk l _ r => LLRB_col (rb_col l) l /\ LLRB_col Black r
   | Red, Rd l _ r => LLRB_col Black l /\ LLRB_col Black r
   | _, _ => False
   end.
@@ -92,6 +98,7 @@ Notation Quasi_LLRB_col t :=
   | _ => False
   end.
 
+(* The black nodes are equally balanced. *)
 Inductive Bk_balanced : nat -> rb_tree -> Prop :=
   | Bk_balanced_Leaf :
     Bk_balanced 0 Leaf
@@ -103,11 +110,56 @@ Inductive Bk_balanced : nat -> rb_tree -> Prop :=
 Definition LLRB p n t := LLRB_col p t /\ Bk_balanced n t.
 Definition Quasi_LLRB n t := Quasi_LLRB_col t /\ Bk_balanced n t.
 
-Theorem rb_max_height n t :
-  Bk_balanced n t -> rb_height t <= 2 * n.
+Lemma LLRB_Rd_inv c n l x r :
+  LLRB Red n (Fork c l x r) -> LLRB Black n l /\ LLRB Black n r.
 Proof.
-revert n; induction t; simpl; intros; inv H; auto.
-all: apply IHt1 in H3; apply IHt2 in H6; lia.
+intros []. inv H0; simpl in H. easy.
+Qed.
+
+Lemma LLRB_0_Bk_inv c l x r :
+  ¬LLRB Black 0 (Fork c l x r).
+Proof.
+intros []; inv H0.
+Qed.
+
+Lemma LLRB_rb_col_Black t :
+  LLRB_col Black t -> rb_col t = Black.
+Proof.
+destruct t. easy.
+destruct c; easy.
+Qed.
+
+Lemma LLRB_Bk_inv c n l x r :
+  LLRB Black (S n) (Fork c l x r) ->
+  LLRB (rb_col l) n l /\ LLRB (rb_col r) n r.
+Proof.
+intros []. inv H0. simpl in H.
+repeat split; try easy.
+rewrite LLRB_rb_col_Black; easy.
+Qed.
+
+Theorem rb_height_bound_any_root c n t :
+  LLRB c n t ->
+  match c with
+  | Red => rb_height t <= 1 + 2 * n
+  | Black => rb_height t <= 2 * n
+  end.
+Proof.
+revert n c; induction t; simpl; intros.
+- destruct c, H; inv H0; simpl; auto.
+- destruct c0.
+  + apply LLRB_Rd_inv in H as [].
+    apply IHt1 in H; apply IHt2 in H0; lia.
+  + destruct n. apply LLRB_0_Bk_inv in H; easy.
+    apply LLRB_Bk_inv in H as [].
+    apply IHt1 in H; apply IHt2 in H0.
+    destruct (rb_col t1), (rb_col t2); lia.
+Qed.
+
+Corollary rb_height_bound n t :
+  LLRB Black n t -> rb_height t <= 2 * n.
+Proof.
+intros; apply rb_height_bound_any_root in H; easy.
 Qed.
 
 Theorem LLRB_rb_insert n x t :
