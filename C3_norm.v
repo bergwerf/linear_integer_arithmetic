@@ -339,10 +339,10 @@ Section Powerset.
 
 Notation Below x := (Forall (λ y, leb y x = false)).
 
-Fixpoint powerset (u : list X) :=
-  match u with
+Fixpoint powerset (dom : list X) :=
+  match dom with
   | [] => [[]]
-  | a :: v => let p := powerset v in p ++ map (cons a) p
+  | a :: dom' => let p := powerset dom' in p ++ map (cons a) p
   end.
 
 Theorem Increasing_Below x l :
@@ -378,16 +378,16 @@ apply Forall_incl with (l':=l); intros.
 apply in_remove in H0; easy. apply Increasing_Below, H.
 Qed.
 
-Theorem Increasing_In_powerset u l :
-  (∀x, In x l -> In x u) ->
-  Increasing u -> Increasing l ->
-  In l (powerset u).
+Theorem Increasing_In_powerset dom l :
+  (∀x, In x l -> In x dom) ->
+  Increasing dom -> Increasing l ->
+  In l (powerset dom).
 Proof.
-revert l; induction u as [|e u']; simpl; intros.
+revert l; induction dom as [|e dom']; simpl; intros.
 destruct l; [now left|right]; eapply H, in_eq.
 assert(He := Increasing_remove e _ H1).
-assert(In (remove X_dec e l) (powerset u')). {
-  apply IHu'. intros x Hx; apply in_remove in Hx as [].
+assert(In (remove X_dec e l) (powerset dom')). {
+  apply IHdom'. intros x Hx; apply in_remove in Hx as [].
   apply H in H2 as []; [congruence|easy].
   eapply RTC_weaken, H0. easy. }
 apply in_app_iff; destruct (in_dec X_dec e l).
@@ -399,7 +399,7 @@ apply Increasing_unique; try easy.
   apply in_cons, in_in_remove; easy.
 - apply Below_Increasing.
   apply Increasing_remove, H1.
-  apply Forall_incl with (l':=u'); intros.
+  apply Forall_incl with (l':=dom'); intros.
   apply in_remove in H3 as [].
   apply H in H3 as []; [congruence|easy].
   apply Increasing_Below, H0.
