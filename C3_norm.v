@@ -208,8 +208,8 @@ Fixpoint dedup l :=
   | [] => []
   | x :: l' =>
     match l' with
-    | [] => [x]
-    | y :: l'' => if leb y x then dedup l' else x :: dedup l'
+    | []     => [x]
+    | y :: _ => if leb y x then dedup l' else x :: dedup l'
     end
   end.
 
