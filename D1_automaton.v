@@ -93,7 +93,32 @@ Section Constructions.
 
 Variable letter : Set.
 
-(* Track two automata at once to decide the complement of two languages. *)
+(* Accept the complement of a language by inverting accept states. *)
+Section Complementation.
+
+Variable A : automaton letter.
+Hypothesis det : Deterministic A.
+
+Definition compl := Automaton _ _ (start A) (λ s, negb (accept A s)) (trans A).
+
+Theorem compl_Accepts word s :
+  Accepts compl word [s] <-> ¬Accepts A word [s].
+Proof.
+revert s; induction word as [|c w]; simpl; intros.
+- now destruct (accept A s).
+- rewrite app_nil_r. assert(H := det c s).
+  apply list_singleton in H as [t R]; rewrite R. apply IHw.
+Qed.
+
+Corollary compl_spec word :
+  Language compl word <-> ¬Language A word.
+Proof.
+intros; apply compl_Accepts.
+Qed.
+
+End Complementation.
+
+(* Accept the conjunction of two languages by tracking two automata. *)
 Section Product.
 
 Variable A B : automaton letter.
@@ -149,6 +174,7 @@ Qed.
 End Product.
 
 (* Make a deteministic automaton by tracking all reachable states. *)
+(* List normalization could also be computed using a binary tree. *)
 Section Powerset.
 
 Variable A : automaton letter.
@@ -281,7 +307,7 @@ Qed.
 
 End Powerset.
 
-(* Add a default rejection state None. *)
+(* Add a default reject state None. *)
 Section Option.
 
 Variable A : automaton letter.
@@ -343,32 +369,6 @@ intros [Q [Q_len Q_spec]]; exists (None :: map Some Q); split.
 Qed.
 
 End Option.
-
-(* Accept the complement of a language by inverting the accept states. *)
-Section Complementation.
-
-Variable A : automaton letter.
-Hypothesis det : Deterministic A.
-
-Definition compl := Automaton _ _
-  (start A) (λ s, negb (accept A s)) (trans A).
-
-Theorem compl_Accepts word s :
-  Accepts compl word [s] <-> ¬Accepts A word [s].
-Proof.
-revert s; induction word as [|c w]; simpl; intros.
-- now destruct (accept A s).
-- rewrite app_nil_r. assert(H := det c s).
-  apply list_singleton in H as [t R]; rewrite R. apply IHw.
-Qed.
-
-Corollary compl_spec word :
-  Language compl word <-> ¬Language A word.
-Proof.
-intros; apply compl_Accepts.
-Qed.
-
-End Complementation.
 
 (* Change the alphabet using a projection function. *)
 Section Projection.
