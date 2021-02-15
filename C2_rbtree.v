@@ -128,7 +128,7 @@ Proof.
 intros []. inv H0; simpl in H. easy.
 Qed.
 
-Theorem rb_height_bound_any_root c n t :
+Theorem rb_height_upper_bound c n t :
   LLRB c n t ->
   match c with
   | Red => rb_height t <= 1 + 2 * n
@@ -144,12 +144,6 @@ revert n c; induction t; simpl; intros.
     apply LLRB_Bk_inv in H as [].
     apply IHt1 in H; apply IHt2 in H0.
     destruct (rb_col t1); lia.
-Qed.
-
-Corollary rb_height_bound n t :
-  LLRB Black n t -> rb_height t <= 2 * n.
-Proof.
-intros; apply rb_height_bound_any_root in H; easy.
 Qed.
 
 Theorem LLRB_rb_insert n x t :
