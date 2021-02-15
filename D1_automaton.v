@@ -173,8 +173,7 @@ Qed.
 
 End Product.
 
-(* Make a deteministic automaton by tracking all reachable states. *)
-(* List normalization could also be computed using a binary tree. *)
+(* Make an automaton deterministic by tracking all reachable states. *)
 Section Powerset.
 
 Variable A : automaton letter.

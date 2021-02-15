@@ -1,7 +1,22 @@
-# Decision procedures for linear integer arithmetic.
+# A theoretical decision procedure for linear integer arithmetic.
 This project is a study into decision procedures for linear integer arithmetic, 
 also known as weak integer arithmetic and Presburger arithmetic. A useful 
 introduction is given by [1].
+
+The algorithm I actually ended up implementing is the naive version of the
+second (automata based) algorithm described in the next section. Along with
+this, I implemented and verified several other interesting parts:
+
++ Matrix transposition on vectors.
++ Generic definitions for model theory.
++ Several classic automaton constructions.
++ A depth-first search algorithm that remembers visited nodes.
+
+I also revised a merge sort implementation that was written by Hugo Herbelin,
+and started working on a left-leaning red-black tree implementation that could
+be used to make depth-first search more efficient.
+
+# Algorithms
 
 ## 1. The Presburger-Cooper algorithm.
 This algorithm is based on the description by Reddy and Loveland [2], which 

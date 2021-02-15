@@ -1,4 +1,4 @@
-(* Produce canonical lists using merge-sort and deduplication. *)
+(* Produce canonical lists using merge sort and deduplication. *)
 
 Require Import Permutation.
 From larith Require Import A_setup B1_utils.
@@ -51,7 +51,7 @@ apply leb_asym; easy.
 Qed.
 
 (******************************************************************************)
-(* I. A merge-sort algorithm.                                                 *)
+(* I. A merge sort algorithm.                                                 *)
 (******************************************************************************)
 (* Initial author: Hugo Herbelin, Oct 2009                                    *)
 (* This section only relies on the leb_total hypothesis.                      *)

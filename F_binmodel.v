@@ -395,7 +395,8 @@ I have given up on actually making this implementation perform well, but I do
 have some ideas left for making the implementation theoretically faster.
 + Double negation (between universal quantifiers) could be removed.
 + The depth-first search could use a binary search tree to store visited states.
-+ The automaton construction could be separated from the specification.
++ The saturation construction could pre-compute all accept states.
++ The algorithm could be separated from its correctness proof.
 *)
 
 Example solve_two_inequalities :
