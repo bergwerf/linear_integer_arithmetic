@@ -2,7 +2,7 @@
 
 Require Vector.
 Require Import PeanoNat BinNat Lia.
-From larith Require Import A_setup B1_utils B2_vector C1_order.
+From larith Require Import A_setup B1_utils B2_vector C2_order.
 From larith Require Import D1_automaton D2_regular E1_formula.
 
 (* Algorithm for deciding first-order realizability using finite automata. *)
@@ -122,7 +122,7 @@ unfold Automata.Image; rewrite Forall2_map; split.
 - intros H; induction H; simpl. easy. inv H; inv H1.
 - revert w; induction v; destruct w; simpl; try easy.
   intros H; inv H; apply Forall2_cons.
-  + apply Vector.caseS' with (v0:=a); intros [] a'; auto.
+  + apply Vector.caseS' with (v:=a); intros [] a'; auto.
   + apply IHv; easy.
 Qed.
 

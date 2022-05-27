@@ -1,6 +1,6 @@
 (* Ordering using a comparison function. *)
 
-From larith Require Import A_setup B1_utils C1_sort.
+From larith Require Import A_setup B1_utils C1_norm.
 
 Record Order {X} (cmp : X -> X -> comparison) := Order_spec {
   cmp_eq : ∀x y, cmp x y = Eq <-> x = y;

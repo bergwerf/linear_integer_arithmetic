@@ -1,7 +1,7 @@
 (* Basic automata theory. *)
 
 Require Import Bool PeanoNat Permutation Eqdep_dec.
-From larith Require Import A_setup B1_utils C1_order C3_norm C4_dfs.
+From larith Require Import A_setup B1_utils C2_order C1_norm C4_dfs.
 
 Record automaton (letter : Set) := Automaton {
   state  : Set;

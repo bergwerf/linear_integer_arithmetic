@@ -2,7 +2,7 @@
 
 Require Vector.
 Require Import Bool PeanoNat BinNat Nnat Lia.
-From larith Require Import A_setup B1_utils B2_vector B3_binary C1_order.
+From larith Require Import A_setup B1_utils B2_vector B3_binary C2_order.
 From larith Require Import D1_automaton D2_regular E1_formula E2_automatic.
 
 (* A model for the relational language on a domain of binary strings. *)

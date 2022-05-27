@@ -1,6 +1,6 @@
 (* A carrier type for regular predicates. *)
 
-From larith Require Import A_setup B1_utils C1_order C3_norm D1_automaton.
+From larith Require Import A_setup B1_utils C2_order C1_norm D1_automaton.
 
 Section A_regular_predicate.
 

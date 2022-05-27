@@ -2,7 +2,7 @@
 (* See: https://mew.org/~kazu/proj/red-black-tree/ *)
 
 Require Import Lia.
-From larith Require Import A_setup B1_utils C1_order.
+From larith Require Import A_setup B1_utils C2_order.
 
 Section Red_black_tree.
 
