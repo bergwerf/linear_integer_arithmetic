@@ -288,7 +288,7 @@ Lemma nth_firstn {X} i n l (d : X) :
   i < n -> nth i (firstn n l) d = nth i l d.
 Proof.
 revert i n; induction l; destruct n, i; simpl; try easy.
-intros H; apply IHl, Lt.lt_S_n, H.
+intros H; apply IHl, Nat.lt_succ_r, H.
 Qed.
 
 Theorem Automatic_rel_atom (a : rel_atom) :

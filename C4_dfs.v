@@ -239,7 +239,7 @@ revert vis_a; induction n; intros vis_a Hn; intros.
 (* Zero case. Contradition since v ∈ graph \ visited. *)
 destruct H as [[_ H]]; inv H.
 exfalso; apply in_nil with (a:=v).
-apply Le.le_n_0_eq, eq_sym, length_zero_iff_nil in Hn.
+apply Nat.le_0_r, length_zero_iff_nil in Hn.
 rewrite <-Hn; apply subtract_spec; easy.
 (* Successor case. *)
 destruct H as [[]]; inv H0; simpl.
@@ -264,7 +264,7 @@ assert(H' : DFS_solution (v :: vis_a) w path). {
   apply Forall_forall; intros u Hu [F|F]; subst. easy.
   eapply Forall_forall with (x:=u) in H5; easy. }
 assert(Hn' : length (diff graph (v :: vis_a)) <= n). {
-  simpl; eapply Lt.lt_n_Sm_le, Nat.lt_le_trans.
+  simpl; eapply Nat.lt_succ_r, Nat.lt_le_trans.
   apply subtract_length_lt_cons_r; [apply graph_spec|apply H4]. apply Hn. }
 clear H H0 H1 H2 H4 H5 H7 Hv Hn.
 remember (v :: vis_a) as vis_b; clear Heqvis_b vis_a.

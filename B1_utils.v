@@ -395,8 +395,8 @@ Theorem subtract_length_lt_cons_r x a b :
 Proof.
 induction a; simpl; intros. easy.
 destruct H, (dec _), (in_dec _); subst; simpl; try easy.
-apply Lt.le_lt_n_Sm, subtract_length_le_cons_r.
-1: apply Nat.lt_lt_succ_r. 3: apply Lt.lt_n_S.
+apply Nat.lt_succ_r, subtract_length_le_cons_r.
+1: apply Nat.lt_lt_succ_r. 3: apply Nat.lt_succ_r.
 all: apply IHa; easy.
 Qed.
 
